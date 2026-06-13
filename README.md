@@ -14,21 +14,25 @@ This app runs **on your computer**, not in the cloud. That's because your iPhone
 
 ### macOS
 
+Open Terminal and run these three commands:
+
 ```bash
 brew install libimobiledevice
-pip install git+https://github.com/aldenongjingyi/iphone-manager
-iphone-manager
+python3 -m pip install git+https://github.com/aldenongjingyi/iphone-manager
+python3 -m iphone_manager
 ```
+
+> Don't have Homebrew? Install it first at [brew.sh](https://brew.sh), then come back.
 
 ### Windows
 
 1. Install **[Apple Devices](https://apps.microsoft.com/detail/9NP83LWLPZ9K)** from the Microsoft Store (or iTunes — either works).
-2. Install **[Python 3.10+](https://www.python.org/downloads/)** — check "Add Python to PATH" during setup.
-3. Open a terminal and run:
+2. Install **[Python 3.10+](https://www.python.org/downloads/)** — on the first screen of the installer, check **"Add Python to PATH"**.
+3. Open **Command Prompt** (search `cmd` in the Start menu) and run:
 
 ```bat
-pip install git+https://github.com/aldenongjingyi/iphone-manager
-iphone-manager
+python -m pip install git+https://github.com/aldenongjingyi/iphone-manager
+python -m iphone_manager
 ```
 
 Browser opens at `http://localhost:5000`. Plug in your iPhone, tap **Trust** if prompted, and you're in.
@@ -37,8 +41,8 @@ Browser opens at `http://localhost:5000`. Plug in your iPhone, tap **Trust** if 
 
 ## Usage
 
-1. Run `iphone-manager`
-2. Plug your iPhone into USB
+1. Run `python3 -m iphone_manager` (macOS) or `python -m iphone_manager` (Windows)
+2. Plug your iPhone in via USB
 3. Tap **Trust** on the iPhone if it asks
 4. Wait a few seconds for your photos to load
 5. Select files — individually or all at once
@@ -58,30 +62,22 @@ The app remembers what you've already transferred, so running it again will neve
 - Filter by Photos, Videos, or Not yet transferred
 - Real-time progress bar during transfer
 - Transfer history log so duplicates are never copied again
-- Delete from iPhone only after explicit confirmation — never automatic
+- Delete from iPhone requires explicit confirmation — never automatic
 - Works on macOS and Windows
-
----
-
-## Alternative: clone and run
-
-If you'd rather not use pip:
-
-```bash
-git clone https://github.com/aldenongjingyi/iphone-manager
-cd iphone-manager
-bash setup.sh
-bash run.sh
-```
-
-`setup.sh` installs everything into a local `.venv`. On Windows use `setup.bat` and `run.bat`.
 
 ---
 
 ## Troubleshooting
 
+**`pip` is not recognised / `python` is not recognised**
+Use the full form instead:
+- macOS: `python3 -m pip install ...`
+- Windows: `python -m pip install ...`
+
+If Python itself isn't found on Windows, reinstall it from [python.org](https://www.python.org/downloads/) and tick **"Add Python to PATH"** on the first screen.
+
 **"Please tap Trust on your iPhone"**
-Unlock your iPhone before plugging it in. The app retries every 3 seconds — just tap Trust on the iPhone when the dialog appears.
+Unlock your iPhone before plugging it in. The app retries every 3 seconds — just tap Trust when the dialog appears.
 
 **Files don't appear**
 Keep the iPhone unlocked while the app is reading it. Large photo libraries can take 10–30 seconds to index.
@@ -89,18 +85,32 @@ Keep the iPhone unlocked while the app is reading it. Large photo libraries can 
 **Transfer is slow**
 Plug into a USB 3 port (usually blue or marked SS). USB 2 caps out around 25 MB/s, which is slow for large HEIC or 4K video files.
 
-**macOS: "ideviceinfo not found"**
+**macOS: `ideviceinfo not found`**
 ```bash
 brew install libimobiledevice
 ```
 
 **Windows: iPhone not detected**
-Open the Apple Devices app or iTunes at least once to complete the initial device pairing. Then relaunch `iphone-manager`.
+Open the Apple Devices app or iTunes at least once to complete the initial device pairing. Then relaunch the app.
 
 **"pymobiledevice3 not installed"**
 ```bash
-pip install pymobiledevice3
+python3 -m pip install pymobiledevice3   # macOS
+python -m pip install pymobiledevice3    # Windows
 ```
+
+---
+
+## Alternative: clone and run without pip
+
+```bash
+git clone https://github.com/aldenongjingyi/iphone-manager
+cd iphone-manager
+bash setup.sh      # macOS — installs everything into a .venv
+bash run.sh
+```
+
+On Windows use `setup.bat` and `run.bat` instead.
 
 ---
 
@@ -117,7 +127,7 @@ iphone_manager/
 │   └── index.html  Single-page UI
 └── static/
     └── style.css
-pyproject.toml      pip package — defines the iphone-manager command
+pyproject.toml      pip package definition
 setup.sh            macOS setup without pip
 setup.bat           Windows setup without pip
 ```
