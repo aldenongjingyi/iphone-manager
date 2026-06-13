@@ -1,0 +1,109 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            platform: mac
+          - os: windows-latest
+            platform: windows
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install pyinstaller flask pymobiledevice3
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          pyinstaller \
+            --onefile \
+            --name "iphone-manager" \
+            --add-data "iphone_manager/templates:iphone_manager/templates" \
+            --add-data "iphone_manager/static:iphone_manager/static" \
+            --hidden-import pymobiledevice3 \
+            main.py
+          # Preserve execute bit in zip
+          cd dist
+          zip iphone-manager-mac.zip iphone-manager
+          echo "Built: $(ls -lh iphone-manager-mac.zip)"
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          pyinstaller `
+            --onefile `
+            --name "iphone-manager" `
+            --add-data "iphone_manager/templates;iphone_manager/templates" `
+            --add-data "iphone_manager/static;iphone_manager/static" `
+            --hidden-import pymobiledevice3 `
+            main.py
+          Write-Host "Built: $(Get-Item dist\iphone-manager.exe | Select-Object -ExpandProperty Length) bytes"
+
+      - name: Upload macOS artifact
+        if: runner.os == 'macOS'
+        uses: actions/upload-artifact@v4
+        with:
+          name: iphone-manager-mac
+          path: dist/iphone-manager-mac.zip
+          retention-days: 7
+
+      - name: Upload Windows artifact
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v4
+        with:
+          name: iphone-manager-windows
+          path: dist/iphone-manager.exe
+          retention-days: 7
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -lh artifacts/
+
+      - name: Publish to GitHub Releases (latest)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: Latest Build
+          prerelease: true
+          body: |
+            Automatically built from the latest commit on `main`.
+
+            **macOS:** Download `iphone-manager-mac.zip`, unzip it, then double-click `iphone-manager`.
+            First time only: right-click → Open to bypass Gatekeeper.
+
+            **Windows:** Download `iphone-manager.exe` and double-click it.
+            If Windows SmartScreen appears, click More info → Run anyway.
+          files: |
+            artifacts/iphone-manager-mac.zip
+            artifacts/iphone-manager.exe

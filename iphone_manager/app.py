@@ -10,6 +10,7 @@ import logging
 import os
 import queue
 import random
+import sys
 import threading
 import time
 import webbrowser
@@ -36,8 +37,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Flask finds templates/static relative to this file (inside the package dir)
-app = Flask(__name__)
+def _res(relative):
+    """Resolve a path to a bundled resource.
+
+    Works in three environments:
+      1. Normal Python run  →  relative to this file
+      2. PyInstaller --onefile  →  sys._MEIPASS/iphone_manager/<relative>
+      3. pip-installed package  →  relative to this file (same as 1)
+    """
+    if getattr(sys, 'frozen', False):
+        base = os.path.join(sys._MEIPASS, 'iphone_manager')
+    else:
+        base = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base, relative)
+
+
+app = Flask(
+    __name__,
+    template_folder=_res('templates'),
+    static_folder=_res('static'),
+)
 
 # ── shared state ──────────────────────────────────────────────────────────────
 
