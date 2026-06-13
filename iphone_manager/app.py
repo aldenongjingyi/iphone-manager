@@ -5,6 +5,7 @@ Installed entry point:  iphone-manager
 Direct run:             python -m iphone_manager
 """
 
+import asyncio
 import json
 import logging
 import os
@@ -58,6 +59,24 @@ app = Flask(
     static_folder=_res('static'),
 )
 
+# ── async event loop (shared by device poller + all AFC calls) ────────────────
+
+_event_loop: asyncio.AbstractEventLoop = None
+
+
+def _start_event_loop():
+    global _event_loop
+    _event_loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(_event_loop)
+    _event_loop.run_forever()
+
+
+def run_async(coro):
+    """Submit a coroutine to the persistent event loop and block until done."""
+    future = asyncio.run_coroutine_threadsafe(coro, _event_loop)
+    return future.result()
+
+
 # ── shared state ──────────────────────────────────────────────────────────────
 
 _state = {'lockdown': None, 'device_info': None, 'afc': None}
@@ -86,7 +105,7 @@ def _get_afc():
         if not lockdown:
             return None
         if not _state['afc']:
-            _state['afc'] = dev.get_afc_client(lockdown)
+            _state['afc'] = run_async(dev.get_afc_client(lockdown))
         return _state['afc']
 
 
@@ -104,7 +123,7 @@ def _on_connected(lockdown, info):
         _state['afc'] = None
 
     try:
-        s = stor.get_storage_info(lockdown)
+        s = run_async(stor.get_storage_info(lockdown))
         if s:
             info = {**info, 'storage': s}
     except Exception:
@@ -151,7 +170,7 @@ def api_device():
     result = {**info, 'connected': bool(lockdown)}
     if lockdown:
         try:
-            s = stor.get_storage_info(lockdown)
+            s = run_async(stor.get_storage_info(lockdown))
             if s:
                 result['storage'] = s
         except Exception:
@@ -175,7 +194,7 @@ def api_files():
         udid = _state['device_info'].get('udid', '') if _state['device_info'] else ''
 
     try:
-        files      = xfr.list_media_files(afc)
+        files      = run_async(xfr.list_media_files(afc))
         transferred = db.get_transferred_files(udid)
         for f in files:
             f['transferred'] = f['path'] in transferred
@@ -202,18 +221,36 @@ def api_thumbnail():
     if not afc:
         return ('', 503)
 
-    data = xfr.get_thumbnail_bytes(afc, file_path)
+    data = run_async(xfr.get_thumbnail_bytes(afc, file_path))
     if not data:
         return ('', 404)
 
-    ext = Path(file_path).suffix.lower()
-    mime_map = {
-        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
-        '.gif': 'image/gif', '.heic': 'image/heic', '.heif': 'image/heic',
-        '.bmp': 'image/bmp', '.tiff': 'image/tiff', '.tif': 'image/tiff',
-    }
-    mime = mime_map.get(ext, 'application/octet-stream')
-    return Response(data, mimetype=mime, headers={'Cache-Control': 'max-age=3600'})
+    jpeg_data = _to_jpeg_thumbnail(data, file_path)
+    if jpeg_data:
+        return Response(jpeg_data, mimetype='image/jpeg',
+                        headers={'Cache-Control': 'max-age=3600'})
+    return ('', 404)
+
+
+def _to_jpeg_thumbnail(data: bytes, file_path: str, size: int = 300) -> bytes | None:
+    """Convert image bytes to a JPEG thumbnail. Handles HEIC via pillow-heif."""
+    try:
+        import io
+        from PIL import Image
+        ext = Path(file_path).suffix.lower()
+        if ext in ('.heic', '.heif'):
+            try:
+                import pillow_heif
+                pillow_heif.register_heif_opener()
+            except ImportError:
+                return None
+        img = Image.open(io.BytesIO(data))
+        img.thumbnail((size, size))
+        out = io.BytesIO()
+        img.convert('RGB').save(out, format='JPEG', quality=75)
+        return out.getvalue()
+    except Exception:
+        return None
 
 
 @app.route('/api/transfer', methods=['POST'])
@@ -241,7 +278,7 @@ def api_transfer():
         udid = _state['device_info'].get('udid', '') if _state['device_info'] else ''
 
     try:
-        all_files = xfr.list_media_files(afc)
+        all_files = run_async(xfr.list_media_files(afc))
     except Exception as e:
         _reset_afc()
         return jsonify({'error': f'Cannot read device: {e}'}), 500
@@ -268,8 +305,8 @@ def api_transfer():
             })
 
         try:
-            results = xfr.transfer_files(afc, selected, destination,
-                                          already_transferred=already, progress_cb=progress)
+            results = run_async(xfr.transfer_files(afc, selected, destination,
+                                                    already_transferred=already, progress_cb=progress))
             for f in results['success']:
                 db.record_transfer(udid, f['path'], f['filename'], f['dest_path'], f['size'])
             _broadcast('transfer_complete', {
@@ -309,7 +346,7 @@ def api_delete():
     with _state_lock:
         udid = _state['device_info'].get('udid', '') if _state['device_info'] else ''
 
-    results = xfr.delete_files(afc, file_paths)
+    results = run_async(xfr.delete_files(afc, file_paths))
     for path in results['success']:
         db.mark_deleted(udid, path)
 
@@ -380,7 +417,7 @@ def api_events():
 
             if lockdown and info:
                 try:
-                    s = stor.get_storage_info(lockdown)
+                    s = run_async(stor.get_storage_info(lockdown))
                     if s:
                         info = {**info, 'storage': s}
                 except Exception:
@@ -527,11 +564,19 @@ _DEMO_HISTORY_STATS = {
 # ── entry point ───────────────────────────────────────────────────────────────
 
 def main():
+    # Start persistent asyncio event loop in a background thread.
+    # All device/AFC async calls run on this loop via run_async().
+    loop_thread = threading.Thread(target=_start_event_loop, daemon=True, name='async-loop')
+    loop_thread.start()
+    # Wait until the loop is actually running before we submit any coroutines.
+    while _event_loop is None or not _event_loop.is_running():
+        time.sleep(0.01)
+
     if not DEMO_MODE:
         db.init_db()
         logger.info("Database initialised")
 
-        poller = dev.DevicePoller(interval=3)
+        poller = dev.DevicePoller(interval=3, event_loop=_event_loop)
         poller.on_connected    = _on_connected
         poller.on_disconnected = _on_disconnected
         poller.on_untrusted    = _on_untrusted
@@ -541,7 +586,8 @@ def main():
     url = f'http://127.0.0.1:{PORT}'
     mode = '  [DEMO — no iPhone needed]' if DEMO_MODE else ''
 
-    if not IS_CLOUD:
+    IS_ELECTRON = os.environ.get('ELECTRON', '') == '1'
+    if not IS_CLOUD and not IS_ELECTRON:
         def _open():
             time.sleep(1.2)
             webbrowser.open(url)

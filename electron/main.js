@@ -62,7 +62,7 @@ async function waitForBackend (port, timeoutMs = 20000) {
 
 function startPythonBackend (port) {
   const { bin, args } = getPythonBinary();
-  const env = { ...process.env, PORT: String(port) };
+  const env = { ...process.env, PORT: String(port), ELECTRON: '1' };
 
   pythonProcess = spawn(bin, args, { env, windowsHide: true });
 
@@ -121,7 +121,6 @@ function createMainWindow (port) {
 
   win.once('ready-to-show', () => {
     win.show();
-    if (isDev) win.webContents.openDevTools({ mode: 'detach' });
   });
 
   // If Flask crashes mid-session, show a friendly error instead of blank page

@@ -1,5 +1,6 @@
 """
 File transfer and deletion logic for iPhone photos/videos via AFC.
+All public functions are async — call them via run_async() from sync code.
 """
 
 import os
@@ -19,7 +20,7 @@ CHUNK_SIZE = 1024 * 512   # 512 KB read chunks
 
 # ── file listing ──────────────────────────────────────────────────────────────
 
-def list_media_files(afc_client):
+async def list_media_files(afc_client):
     """
     Walk /DCIM on the iPhone and return a list of media file dicts.
     Each dict: path, filename, folder, size, size_mb, mtime, type, ext
@@ -28,7 +29,7 @@ def list_media_files(afc_client):
     dcim = '/DCIM'
 
     try:
-        folders = sorted(afc_client.listdir(dcim))
+        folders = sorted(await afc_client.listdir(dcim))
     except Exception as e:
         logger.error(f"Cannot list /DCIM: {e}")
         return files
@@ -36,7 +37,7 @@ def list_media_files(afc_client):
     for folder in folders:
         folder_path = f'{dcim}/{folder}'
         try:
-            entries = sorted(afc_client.listdir(folder_path))
+            entries = sorted(await afc_client.listdir(folder_path))
         except Exception:
             continue
 
@@ -47,9 +48,14 @@ def list_media_files(afc_client):
 
             file_path = f'{folder_path}/{filename}'
             try:
-                stat = afc_client.stat(file_path)
+                stat = await afc_client.stat(file_path)
                 size = int(stat.get('st_size', 0) or 0)
-                mtime = int(stat.get('st_mtime', 0) or 0)
+                mtime_raw = stat.get('st_mtime', 0)
+                # v9+: st_mtime is a datetime; older: it's an int unix timestamp
+                if hasattr(mtime_raw, 'timestamp'):
+                    mtime = int(mtime_raw.timestamp())
+                else:
+                    mtime = int(mtime_raw or 0)
                 files.append({
                     'path': file_path,
                     'filename': filename,
@@ -68,15 +74,18 @@ def list_media_files(afc_client):
 
 # ── thumbnail ─────────────────────────────────────────────────────────────────
 
-def get_thumbnail_bytes(afc_client, file_path, max_bytes=65536):
+async def get_thumbnail_bytes(afc_client, file_path, max_bytes=10 * 1024 * 1024):
     """
-    Read the first *max_bytes* of an image file for inline preview.
-    For JPEG this contains the whole image (small files) or enough for a
-    quick preview. Returns raw bytes or None on failure.
+    Read up to *max_bytes* of an image file for thumbnail generation.
+    Default 10 MB is enough for any iPhone photo/HEIC.
+    Returns raw bytes or None on failure.
     """
     try:
-        with afc_client.open(file_path, 'rb') as f:
-            return f.read(max_bytes)
+        handle = await afc_client.fopen(file_path, 'r')
+        try:
+            return await afc_client.fread(handle, max_bytes)
+        finally:
+            await afc_client.fclose(handle)
     except Exception as e:
         logger.debug(f"Thumbnail read failed for {file_path}: {e}")
         return None
@@ -84,19 +93,19 @@ def get_thumbnail_bytes(afc_client, file_path, max_bytes=65536):
 
 # ── transfer ──────────────────────────────────────────────────────────────────
 
-def transfer_files(afc_client, file_list, destination,
-                   already_transferred=None, progress_cb=None):
+async def transfer_files(afc_client, file_list, destination,
+                         already_transferred=None, progress_cb=None):
     """
     Copy selected files from iPhone to *destination* folder.
 
     Parameters
     ----------
-    afc_client        : open AfcService instance
-    file_list         : list of file dicts (from list_media_files)
-    destination       : local directory path (created if missing)
+    afc_client          : open AfcService instance
+    file_list           : list of file dicts (from list_media_files)
+    destination         : local directory path (created if missing)
     already_transferred : set of device file paths already in the DB
-    progress_cb       : callable(done, total, filename, status)
-                        status ∈ {'copying', 'success', 'skipped', 'failed'}
+    progress_cb         : callable(done, total, filename, status)
+                          status ∈ {'copying', 'success', 'skipped', 'failed'}
 
     Returns
     -------
@@ -128,7 +137,7 @@ def transfer_files(afc_client, file_list, destination,
             progress_cb(idx + 1, total, filename, 'copying')
 
         try:
-            _copy_file(afc_client, path, dest_path)
+            await _copy_file(afc_client, path, dest_path)
 
             # ── verify ────────────────────────────────────────────────────
             local_size = os.path.getsize(dest_path)
@@ -143,7 +152,6 @@ def transfer_files(afc_client, file_list, destination,
 
         except Exception as e:
             logger.error(f"Transfer failed for {filename}: {e}")
-            # Clean up partial file
             if os.path.exists(dest_path):
                 try:
                     os.remove(dest_path)
@@ -156,14 +164,17 @@ def transfer_files(afc_client, file_list, destination,
     return results
 
 
-def _copy_file(afc_client, src_path, dest_path):
-    with afc_client.open(src_path, 'rb') as src:
+async def _copy_file(afc_client, src_path, dest_path):
+    handle = await afc_client.fopen(src_path, 'r')
+    try:
         with open(dest_path, 'wb') as dst:
             while True:
-                chunk = src.read(CHUNK_SIZE)
+                chunk = await afc_client.fread(handle, CHUNK_SIZE)
                 if not chunk:
                     break
                 dst.write(chunk)
+    finally:
+        await afc_client.fclose(handle)
 
 
 def _unique_dest(directory, filename, folder_hint=''):
@@ -175,7 +186,6 @@ def _unique_dest(directory, filename, folder_hint=''):
     candidate = os.path.join(directory, f'{base}{suffix}{ext}')
     if not os.path.exists(candidate):
         return candidate
-    # Last resort: numeric suffix
     n = 1
     while True:
         candidate = os.path.join(directory, f'{base}_{n}{ext}')
@@ -186,7 +196,7 @@ def _unique_dest(directory, filename, folder_hint=''):
 
 # ── delete ────────────────────────────────────────────────────────────────────
 
-def delete_files(afc_client, file_paths):
+async def delete_files(afc_client, file_paths):
     """
     Delete a list of file paths from the iPhone via AFC.
 
@@ -196,7 +206,7 @@ def delete_files(afc_client, file_paths):
 
     for path in file_paths:
         try:
-            afc_client.rm(path)
+            await afc_client.rm(path)
             results['success'].append(path)
         except Exception as e:
             logger.error(f"Delete failed for {path}: {e}")
@@ -213,7 +223,6 @@ def check_disk_space(destination, required_bytes):
     Falls back to (True, 0) if the check itself fails.
     """
     try:
-        # Use parent dir if destination doesn't exist yet
         check_dir = destination
         while not os.path.exists(check_dir):
             check_dir = os.path.dirname(check_dir)

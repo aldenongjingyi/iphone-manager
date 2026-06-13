@@ -3,13 +3,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def get_storage_info(lockdown_client):
+async def get_storage_info(lockdown_client):
     """
     Get iPhone storage information.
     Tries the disk_usage domain first, falls back to lockdown all_values.
     """
     try:
-        info = lockdown_client.get_value('com.apple.disk_usage')
+        info = await lockdown_client.get_value('com.apple.disk_usage')
         if info:
             total = info.get('TotalDiskCapacity', 0)
             free = info.get('TotalSystemAvailable', 0)
@@ -30,9 +30,9 @@ def get_storage_info(lockdown_client):
     except Exception as e:
         logger.debug(f"disk_usage domain failed: {e}")
 
-    # Fallback: read from all_values
+    # Fallback: read from all_values (populated synchronously during lockdown init)
     try:
-        vals = lockdown_client.all_values
+        vals = lockdown_client.all_values or {}
         total = vals.get('TotalDiskCapacity', 0)
         free = vals.get('TotalSystemAvailable', 0)
         used = total - free

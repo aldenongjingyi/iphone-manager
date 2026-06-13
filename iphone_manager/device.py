@@ -7,6 +7,7 @@ Responsibilities:
   - DevicePoller         – background thread that polls for connect/disconnect
 """
 
+import asyncio
 import logging
 import threading
 import time
@@ -48,7 +49,7 @@ def check_dependencies():
 
 # ── device detection ──────────────────────────────────────────────────────────
 
-def detect_device():
+async def detect_device():
     """
     Try to connect to the first USB-attached iPhone.
 
@@ -69,7 +70,7 @@ def detect_device():
         return None, {'error': 'pymobiledevice3 is not installed. Run the setup script.'}
 
     try:
-        devices = select_devices_by_connection_type(connection_type='USB')
+        devices = await select_devices_by_connection_type(connection_type='USB')
     except Exception as e:
         logger.debug(f"usbmux select error: {e}")
         devices = []
@@ -79,11 +80,10 @@ def detect_device():
 
     serial = devices[0].serial
     try:
-        lockdown = create_using_usbmux(serial=serial)
+        lockdown = await create_using_usbmux(serial=serial)
         return lockdown, _build_info(lockdown)
 
     except (NotTrustedError, PairingError):
-        # Device is visible but user hasn't tapped "Trust"
         return None, {
             'trusted': False,
             'serial': serial,
@@ -94,7 +94,6 @@ def detect_device():
         return None, None
     except Exception as e:
         logger.error(f"Lockdown error: {e}")
-        # Generic "not paired" messages from older versions
         msg = str(e).lower()
         if any(k in msg for k in ('trust', 'pair', 'passcode')):
             return None, {
@@ -108,29 +107,44 @@ def detect_device():
 def _build_info(lockdown):
     """Extract a plain-dict summary from a lockdown client."""
     try:
-        vals = lockdown.all_values
+        vals = lockdown.all_values or {}
         return {
-            'udid': lockdown.udid,
-            'name': vals.get('DeviceName', 'iPhone'),
-            'product_type': vals.get('ProductType', ''),
-            'ios_version': vals.get('ProductVersion', ''),
-            'build_version': vals.get('BuildVersion', ''),
+            'udid': lockdown.udid or lockdown.identifier,
+            'name': vals.get('DeviceName', lockdown.short_info.get('DeviceName', 'iPhone')),
+            'product_type': vals.get('ProductType', lockdown.short_info.get('ProductType', '')),
+            'ios_version': vals.get('ProductVersion', lockdown.short_info.get('ProductVersion', '')),
+            'build_version': vals.get('BuildVersion', lockdown.short_info.get('BuildVersion', '')),
             'serial': vals.get('SerialNumber', ''),
             'model': vals.get('HardwareModel', ''),
             'trusted': True,
         }
     except Exception as e:
         logger.error(f"_build_info error: {e}")
-        return {'udid': getattr(lockdown, 'udid', ''), 'trusted': True}
+        try:
+            si = lockdown.short_info
+            return {
+                'udid': lockdown.identifier,
+                'name': si.get('DeviceName', 'iPhone'),
+                'product_type': si.get('ProductType', ''),
+                'ios_version': si.get('ProductVersion', ''),
+                'build_version': si.get('BuildVersion', ''),
+                'serial': '',
+                'model': '',
+                'trusted': True,
+            }
+        except Exception:
+            return {'udid': getattr(lockdown, 'identifier', ''), 'trusted': True}
 
 
 # ── AFC client ────────────────────────────────────────────────────────────────
 
-def get_afc_client(lockdown_client):
+async def get_afc_client(lockdown_client):
     """Open an AFC service connection (gives access to /DCIM etc.)."""
     try:
         from pymobiledevice3.services.afc import AfcService
-        return AfcService(lockdown_client)
+        service = AfcService(lockdown_client)
+        await service.connect()
+        return service
     except Exception as e:
         logger.error(f"AFC open error: {e}")
         return None
@@ -142,10 +156,14 @@ class DevicePoller:
     """
     Polls USB every *interval* seconds and fires callbacks when device
     state changes (connected / disconnected / untrusted).
+
+    Pass *event_loop* to reuse a persistent asyncio loop (recommended).
+    Falls back to asyncio.run() if none is provided.
     """
 
-    def __init__(self, interval=3):
+    def __init__(self, interval=3, event_loop=None):
         self.interval = interval
+        self._event_loop = event_loop
         self._stop = threading.Event()
         self._thread = None
         self.on_connected = None      # callback(lockdown, info)
@@ -160,13 +178,27 @@ class DevicePoller:
     def stop(self):
         self._stop.set()
 
+    def _run_async(self, coro):
+        if self._event_loop and self._event_loop.is_running():
+            future = asyncio.run_coroutine_threadsafe(coro, self._event_loop)
+            return future.result()
+        return asyncio.run(coro)
+
     def _run(self):
-        last_udid = None  # None = not connected
+        # Sentinels: None = no device, '__UNTRUSTED__' = found but not trusted, else udid
+        last_udid = None
 
         while not self._stop.is_set():
             try:
-                lockdown, info = detect_device()
-                current_udid = info.get('udid') if info else None
+                lockdown, info = self._run_async(detect_device())
+
+                if lockdown and info:
+                    current_udid = info.get('udid', '__CONNECTED__')
+                elif info and not info.get('trusted', True):
+                    # Use serial so we get a stable ID for the untrusted device
+                    current_udid = '__UNTRUSTED__' + info.get('serial', '')
+                else:
+                    current_udid = None
 
                 if current_udid != last_udid:
                     last_udid = current_udid
@@ -177,7 +209,6 @@ class DevicePoller:
                     elif info and not info.get('trusted', True):
                         if callable(self.on_untrusted):
                             self.on_untrusted(info)
-                        last_udid = None  # keep retrying
                     else:
                         if callable(self.on_disconnected):
                             self.on_disconnected()

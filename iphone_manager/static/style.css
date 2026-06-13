@@ -11,6 +11,11 @@
   justify-content: center;
   gap: 10px;
   flex-shrink: 0;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+#demo-banner a, #demo-banner button {
+  -webkit-app-region: no-drag;
 }
 .demo-pill {
   background: var(--accent);
@@ -75,6 +80,12 @@ body { background: var(--bg); color: var(--text); display: flex; flex-direction:
 #topbar .icon-btn,
 #device-status-badge {
   -webkit-app-region: no-drag;
+}
+
+/* Non-interactive topbar children explicitly inherit drag */
+#device-card, #device-icon, #device-meta, #device-name, #device-sub,
+#topbar .app-title {
+  -webkit-app-region: drag;
 }
 
 #topbar .app-title {

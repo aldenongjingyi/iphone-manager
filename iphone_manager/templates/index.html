@@ -99,7 +99,7 @@
         <div id="state-empty" class="state-panel" style="display:none">
           <div class="state-icon">🖼</div>
           <div class="state-title">No Photos or Videos Found</div>
-          <div class="state-body">Your iPhone's DCIM folder appears to be empty.</div>
+          <div class="state-body">Your iPhone's DCIM folder is empty — photos stored in iCloud aren't accessible over USB.<br><br>To fix this: <strong>Settings → Photos → Download and Keep Originals</strong>, then wait for photos to download and click Refresh.</div>
         </div>
         <div id="state-deps" class="state-panel" style="display:none">
           <div class="state-icon">⚠️</div>
@@ -442,11 +442,6 @@ function updateSelectionInfo() {
 // ── Destination ───────────────────────────────────────────────────────
 
 async function browseDest() {
-  if (DEMO_MODE) {
-    document.getElementById('destination-input').value = '/Users/alex/Pictures/iPhone';
-    return;
-  }
-
   // 1. Electron — native OS dialog (best UX)
   if (window.electronAPI) {
     const folder = await window.electronAPI.pickFolder();
