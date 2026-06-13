@@ -24,58 +24,82 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # ── Python ──────────────────────────────────────────────────────────────
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: pip install pyinstaller flask pymobiledevice3
 
-      - name: Build (macOS)
+      - name: Build Python backend (macOS)
         if: runner.os == 'macOS'
         run: |
           pyinstaller \
             --onefile \
-            --name "iphone-manager" \
+            --name python-backend \
+            --collect-all pymobiledevice3 \
             --add-data "iphone_manager/templates:iphone_manager/templates" \
             --add-data "iphone_manager/static:iphone_manager/static" \
-            --hidden-import pymobiledevice3 \
             main.py
-          # Preserve execute bit in zip
-          cd dist
-          zip iphone-manager-mac.zip iphone-manager
-          echo "Built: $(ls -lh iphone-manager-mac.zip)"
+          echo "Python backend size: $(du -sh dist/python-backend)"
 
-      - name: Build (Windows)
+      - name: Build Python backend (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
           pyinstaller `
             --onefile `
-            --name "iphone-manager" `
+            --name python-backend `
+            --collect-all pymobiledevice3 `
             --add-data "iphone_manager/templates;iphone_manager/templates" `
             --add-data "iphone_manager/static;iphone_manager/static" `
-            --hidden-import pymobiledevice3 `
             main.py
-          Write-Host "Built: $(Get-Item dist\iphone-manager.exe | Select-Object -ExpandProperty Length) bytes"
+          $size = (Get-Item dist\python-backend.exe).Length / 1MB
+          Write-Host "Python backend size: $([math]::Round($size,1)) MB"
 
-      - name: Upload macOS artifact
+      # ── Node / Electron ─────────────────────────────────────────────────────
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build Electron app (macOS — universal .dmg)
+        if: runner.os == 'macOS'
+        run: npx electron-builder --mac --publish never
+        env:
+          # Skip code signing in CI (app will trigger Gatekeeper on first open)
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+      - name: Build Electron app (Windows — NSIS .exe)
+        if: runner.os == 'Windows'
+        run: npx electron-builder --win --publish never
+        env:
+          # Skip code signing
+          WIN_CSC_LINK: ""
+
+      # ── Upload artifacts ─────────────────────────────────────────────────────
+      - name: Upload macOS .dmg
         if: runner.os == 'macOS'
         uses: actions/upload-artifact@v4
         with:
           name: iphone-manager-mac
-          path: dist/iphone-manager-mac.zip
+          path: dist-electron/*.dmg
           retention-days: 7
 
-      - name: Upload Windows artifact
+      - name: Upload Windows .exe
         if: runner.os == 'Windows'
         uses: actions/upload-artifact@v4
         with:
           name: iphone-manager-windows
-          path: dist/iphone-manager.exe
+          path: dist-electron/*.exe
           retention-days: 7
 
+  # ── Publish to GitHub Releases ──────────────────────────────────────────────
   release:
     needs: build
     runs-on: ubuntu-latest
@@ -90,7 +114,7 @@ jobs:
       - name: List artifacts
         run: ls -lh artifacts/
 
-      - name: Publish to GitHub Releases (latest)
+      - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: latest
@@ -99,11 +123,15 @@ jobs:
           body: |
             Automatically built from the latest commit on `main`.
 
-            **macOS:** Download `iphone-manager-mac.zip`, unzip it, then double-click `iphone-manager`.
-            First time only: right-click → Open to bypass Gatekeeper.
+            ### macOS
+            1. Download **iPhone.Manager-*.dmg**
+            2. Open the .dmg and drag **iPhone Manager** to Applications
+            3. First launch: right-click → **Open** to bypass Gatekeeper
 
-            **Windows:** Download `iphone-manager.exe` and double-click it.
-            If Windows SmartScreen appears, click More info → Run anyway.
+            ### Windows
+            1. Download **iPhone.Manager-Setup-*.exe**
+            2. Run the installer
+            3. If SmartScreen warns you: click **More info → Run anyway**
           files: |
-            artifacts/iphone-manager-mac.zip
-            artifacts/iphone-manager.exe
+            artifacts/*.dmg
+            artifacts/*.exe

@@ -1,0 +1,19 @@
+{
+  "name": "iphone-manager",
+  "version": "0.1.0",
+  "description": "iPhone photo/video transfer tool — no iTunes required",
+  "main": "electron/main.js",
+  "author": "aldenongjingyi",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build:python:mac": "pyinstaller --onefile --name python-backend --collect-all pymobiledevice3 --add-data \"iphone_manager/templates:iphone_manager/templates\" --add-data \"iphone_manager/static:iphone_manager/static\" main.py",
+    "build:python:win": "pyinstaller --onefile --name python-backend --collect-all pymobiledevice3 --add-data \"iphone_manager/templates;iphone_manager/templates\" --add-data \"iphone_manager/static;iphone_manager/static\" main.py",
+    "build:mac": "npm run build:python:mac && electron-builder --mac --publish never",
+    "build:win": "npm run build:python:win && electron-builder --win --publish never"
+  },
+  "devDependencies": {
+    "electron": "^29.4.6",
+    "electron-builder": "^24.13.3"
+  }
+}

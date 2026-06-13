@@ -18,3 +18,9 @@ env/
 Thumbs.db
 
 *.log
+
+node_modules/
+dist-electron/
+dist/
+build/
+*.spec

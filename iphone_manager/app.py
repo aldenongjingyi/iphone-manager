@@ -329,6 +329,33 @@ def api_history():
     return jsonify({'history': db.get_transfer_history(udid), 'stats': db.get_stats(udid)})
 
 
+@app.route('/api/pick_folder')
+def api_pick_folder():
+    """Open a native OS folder-picker dialog and return the chosen path.
+
+    Used as a fallback when running outside of Electron (e.g. the standalone
+    PyInstaller binary).  In Electron the renderer calls window.electronAPI
+    .pickFolder() instead, which uses Electron's own dialog — this endpoint
+    is never hit in that case.
+    """
+    try:
+        import tkinter as tk
+        from tkinter import filedialog
+
+        root = tk.Tk()
+        root.withdraw()                          # hide the blank Tk window
+        root.wm_attributes('-topmost', True)     # bring dialog to front
+        folder = filedialog.askdirectory(
+            parent=root,
+            title='Choose destination folder',
+        )
+        root.destroy()
+        return jsonify({'path': folder or None})
+    except Exception as e:
+        logger.warning(f"Folder picker failed: {e}")
+        return jsonify({'path': None, 'error': str(e)})
+
+
 @app.route('/api/check_dependencies')
 def api_check_dependencies():
     if DEMO_MODE:

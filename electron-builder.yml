@@ -1,0 +1,55 @@
+appId: com.aldenongjingyi.iphone-manager
+productName: iPhone Manager
+copyright: Copyright © 2025 aldenongjingyi
+
+directories:
+  output: dist-electron
+  buildResources: build-assets
+
+files:
+  - electron/**
+  - "!node_modules/**"
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+mac:
+  category: public.app-category.utilities
+  darkModeSupport: true
+  # icon: build-assets/icon.icns   # add a 1024×1024 .icns to enable
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+  extraResources:
+    - from: dist/python-backend
+      to: python-backend
+
+dmg:
+  title: iPhone Manager
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 150
+      y: 185
+      type: file
+    - x: 390
+      y: 185
+      type: link
+      path: /Applications
+
+# ── Windows ───────────────────────────────────────────────────────────────────
+win:
+  # icon: build-assets/icon.ico    # add a 256×256 .ico to enable
+  target:
+    - target: nsis
+      arch: [x64]
+  extraResources:
+    - from: dist/python-backend.exe
+      to: python-backend.exe
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  installerHeaderIcon: build-assets/icon.ico   # optional, remove if no icon
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: iPhone Manager

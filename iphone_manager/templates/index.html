@@ -446,14 +446,25 @@ async function browseDest() {
     document.getElementById('destination-input').value = '/Users/alex/Pictures/iPhone';
     return;
   }
-  if ('showDirectoryPicker' in window) {
-    try {
-      const dir = await window.showDirectoryPicker();
-      document.getElementById('destination-input').value = dir.name;
-      toast('warning', 'Tip', 'Browser directory picker gives only folder name. Paste the full path manually for best results.');
-    } catch (e) { /* user cancelled */ }
-  } else {
-    toast('warning', 'No folder picker', 'Type the full destination path manually in the box.');
+
+  // 1. Electron — native OS dialog (best UX)
+  if (window.electronAPI) {
+    const folder = await window.electronAPI.pickFolder();
+    if (folder) document.getElementById('destination-input').value = folder;
+    return;
+  }
+
+  // 2. Standalone binary — tkinter dialog via Flask endpoint
+  try {
+    const res  = await fetch('/api/pick_folder');
+    const data = await res.json();
+    if (data.path) {
+      document.getElementById('destination-input').value = data.path;
+    } else {
+      toast('warning', 'No folder selected', 'Type the path manually if the dialog did not appear.');
+    }
+  } catch (e) {
+    toast('warning', 'Folder picker unavailable', 'Type the destination path directly in the box.');
   }
 }
 
