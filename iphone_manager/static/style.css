@@ -57,11 +57,24 @@ body { background: var(--bg); color: var(--text); display: flex; flex-direction:
 #topbar {
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 14px 20px;
+  /* Leave room on the left for macOS traffic lights (hiddenInset titlebar) */
+  padding: 14px 20px 14px 80px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 16px;
+  /* Whole bar is draggable — buttons/inputs below opt out with no-drag */
+  -webkit-app-region: drag;
+  user-select: none;
+}
+
+/* Everything interactive inside the topbar must opt out of dragging */
+#topbar button,
+#topbar input,
+#topbar a,
+#topbar .icon-btn,
+#device-status-badge {
+  -webkit-app-region: no-drag;
 }
 
 #topbar .app-title {

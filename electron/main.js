@@ -179,7 +179,11 @@ app.on('before-quit', () => {
 
 // Native folder picker — called from renderer via window.electronAPI.pickFolder()
 ipcMain.handle('pick-folder', async () => {
-  const result = await dialog.showOpenDialog(mainWindow, {
+  // Don't attach as a sheet (no parent window arg) — sheets can silently
+  // fail on macOS when titleBarStyle is 'hiddenInset'. Standalone dialog
+  // works reliably on both platforms.
+  if (mainWindow) mainWindow.focus();
+  const result = await dialog.showOpenDialog({
     properties: ['openDirectory', 'createDirectory'],
     title: 'Choose destination folder',
     buttonLabel: 'Select Folder',
