@@ -1,0 +1,3 @@
+# Cloud/demo deployment — no pymobiledevice3 needed (DEMO_MODE=1)
+flask>=3.0.0
+gunicorn>=21.2.0

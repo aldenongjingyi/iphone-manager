@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>iPhone Manager</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{% if demo_mode %}
+<div id="demo-banner">
+  <span class="demo-pill">DEMO</span>
+  This is an interactive preview — no iPhone required. All transfers and deletes are simulated.
+  <a href="https://github.com/anthropics/claude-code" target="_blank" rel="noopener" style="color:inherit;opacity:.7;margin-left:8px">Run locally to use with a real device →</a>
+</div>
+{% endif %}
+<div id="app">
+
+  <!-- ── Top bar ───────────────────────────────────────────────────── -->
+  <header id="topbar">
+    <span class="app-title">📱 iPhone Manager</span>
+    <div id="device-card">
+      <div id="device-icon">📱</div>
+      <div id="device-meta">
+        <div id="device-name">No device connected</div>
+        <div id="device-sub">Plug in your iPhone via USB</div>
+      </div>
+      <span id="device-status-badge" class="badge-disconnected">Disconnected</span>
+    </div>
+    <button class="btn btn-secondary" id="btn-refresh-files" style="display:none" onclick="loadFiles()">
+      ↻ Refresh
+    </button>
+  </header>
+
+  <!-- ── Storage bar ───────────────────────────────────────────────── -->
+  <section id="storage-section" style="display:none">
+    <div id="storage-bar-wrap">
+      <div id="storage-bar">
+        <div class="seg-media" id="seg-media" style="width:0%"></div>
+        <div class="seg-other" id="seg-other" style="width:0%"></div>
+      </div>
+      <span id="storage-summary">—</span>
+    </div>
+    <div id="storage-labels">
+      <span class="lbl"><span class="dot dot-media"></span>Photos &amp; Videos</span>
+      <span class="lbl"><span class="dot dot-other"></span>Other</span>
+      <span class="lbl"><span class="dot dot-free"></span>Free</span>
+    </div>
+  </section>
+
+  <!-- ── Main content ──────────────────────────────────────────────── -->
+  <div id="main-content">
+
+    <!-- File browser -->
+    <div id="file-panel">
+
+      <!-- Toolbar -->
+      <div id="file-toolbar">
+        <div class="tb-left">
+          <button class="filter-btn active" data-filter="all" onclick="setFilter('all')">All</button>
+          <button class="filter-btn" data-filter="image" onclick="setFilter('image')">Photos</button>
+          <button class="filter-btn" data-filter="video" onclick="setFilter('video')">Videos</button>
+          <button class="filter-btn" data-filter="new" onclick="setFilter('new')">Not transferred</button>
+          <span id="file-count-label"></span>
+        </div>
+        <div class="tb-right">
+          <button class="icon-btn" id="btn-select-all" title="Select all" onclick="selectAll()">☑</button>
+          <button class="icon-btn" id="btn-deselect-all" title="Deselect all" onclick="deselectAll()">☐</button>
+          <button class="icon-btn active" id="btn-grid-view" title="Grid view" onclick="setView('grid')">⊞</button>
+          <button class="icon-btn" id="btn-list-view" title="List view" onclick="setView('list')">≡</button>
+        </div>
+      </div>
+
+      <!-- File list -->
+      <div id="file-list-container">
+        <div id="state-no-device" class="state-panel">
+          <div class="state-icon">📱</div>
+          <div class="state-title">No iPhone Connected</div>
+          <div class="state-body">
+            Plug your iPhone into this computer with a USB cable.<br>
+            Tap <strong>Trust</strong> on your iPhone if prompted.
+          </div>
+          <button class="btn btn-secondary" onclick="checkDeps()">Check setup</button>
+        </div>
+        <div id="state-untrusted" class="state-panel" style="display:none">
+          <div class="state-icon" style="animation: spin 2s linear infinite">⏳</div>
+          <div class="state-title">Waiting for Trust</div>
+          <div class="state-body">
+            Your iPhone is connected but not trusted.<br>
+            <strong>Tap "Trust" on your iPhone</strong> when the dialog appears.<br>
+            This dialog will update automatically.
+          </div>
+        </div>
+        <div id="state-loading" class="state-panel" style="display:none">
+          <div class="state-icon spin">⟳</div>
+          <div class="state-title">Loading photos…</div>
+          <div class="state-body">Reading your iPhone's camera roll. This may take a moment.</div>
+        </div>
+        <div id="state-empty" class="state-panel" style="display:none">
+          <div class="state-icon">🖼</div>
+          <div class="state-title">No Photos or Videos Found</div>
+          <div class="state-body">Your iPhone's DCIM folder appears to be empty.</div>
+        </div>
+        <div id="state-deps" class="state-panel" style="display:none">
+          <div class="state-icon">⚠️</div>
+          <div class="state-title" id="deps-title">Setup Required</div>
+          <div class="state-body" id="deps-body"></div>
+        </div>
+        <div id="file-list"></div>
+      </div>
+
+      <!-- Action bar -->
+      <div id="action-bar">
+        <span id="selection-info">0 files selected</span>
+        <div id="destination-wrap">
+          <input type="text" id="destination-input" placeholder="Destination folder…" />
+          <button class="btn btn-secondary" onclick="browseDest()" title="Browse">📁</button>
+        </div>
+        <div id="delete-toggle-wrap">
+          <label class="toggle" title="Delete from iPhone after successful transfer">
+            <input type="checkbox" id="delete-after-toggle">
+            <span class="toggle-track"></span>
+            <span class="toggle-thumb"></span>
+          </label>
+          <span>Delete after</span>
+        </div>
+        <button class="btn btn-primary" id="btn-transfer" onclick="startTransfer()" disabled>
+          ⬇ Transfer
+        </button>
+      </div>
+    </div>
+
+    <!-- History panel -->
+    <aside id="history-panel">
+      <div id="history-header">
+        <h2>Transfer Log</h2>
+        <span id="history-stats"></span>
+      </div>
+      <div id="history-list">
+        <div class="history-empty">No transfers yet</div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ── Progress overlay ───────────────────────────────────────────── -->
+<div id="progress-overlay">
+  <div id="progress-card">
+    <h3>Transferring…</h3>
+    <div id="progress-bar-wrap">
+      <div id="progress-bar"></div>
+    </div>
+    <div id="progress-stats">Starting…</div>
+    <div id="progress-filename"></div>
+  </div>
+</div>
+
+<!-- ── Confirm delete modal ───────────────────────────────────────── -->
+<div id="delete-modal">
+  <div id="delete-modal-card">
+    <h3>⚠️ Delete from iPhone?</h3>
+    <p>
+      You are about to permanently delete the following files from your iPhone.
+      <strong>This cannot be undone.</strong> Files have already been transferred to your computer.
+    </p>
+    <div id="delete-file-list"></div>
+    <div id="delete-modal-actions">
+      <button class="btn btn-secondary" onclick="hideDeleteModal()">Cancel</button>
+      <button class="btn btn-danger" onclick="confirmDelete()">Delete from iPhone</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Toast container ────────────────────────────────────────────── -->
+<div id="toast-container"></div>
+
+<script>
+const DEMO_MODE = {{ demo_mode | tojson }};
+
+// ── State ─────────────────────────────────────────────────────────────
+const state = {
+  files: [],              // all files from device
+  filtered: [],           // files after filter
+  selected: new Set(),    // selected file paths
+  filter: 'all',
+  view: 'grid',
+  connected: false,
+  transferring: false,
+  pendingDelete: [],      // file paths waiting for delete confirm
+};
+
+// ── SSE connection ────────────────────────────────────────────────────
+let sse = null;
+
+function connectSSE() {
+  if (sse) sse.close();
+  sse = new EventSource('/api/events');
+
+  sse.addEventListener('device_connected', e => {
+    const info = JSON.parse(e.data);
+    onDeviceConnected(info);
+  });
+  sse.addEventListener('device_disconnected', () => {
+    onDeviceDisconnected();
+  });
+  sse.addEventListener('device_untrusted', () => {
+    onDeviceUntrusted();
+  });
+  sse.addEventListener('transfer_progress', e => {
+    const d = JSON.parse(e.data);
+    onTransferProgress(d);
+  });
+  sse.addEventListener('transfer_complete', e => {
+    const d = JSON.parse(e.data);
+    onTransferComplete(d);
+  });
+  sse.addEventListener('transfer_error', e => {
+    const d = JSON.parse(e.data);
+    onTransferError(d);
+  });
+
+  sse.onerror = () => {
+    setTimeout(connectSSE, 3000);
+  };
+}
+
+// ── Device events ─────────────────────────────────────────────────────
+
+function onDeviceConnected(info) {
+  state.connected = true;
+  document.getElementById('device-name').textContent = info.name || 'iPhone';
+  document.getElementById('device-sub').textContent =
+    `iOS ${info.ios_version || '—'}  ·  ${info.product_type || ''}`;
+  setBadge('connected', 'Connected');
+
+  if (info.storage) updateStorage(info.storage);
+  document.getElementById('storage-section').style.display = info.storage ? '' : 'none';
+  document.getElementById('btn-refresh-files').style.display = '';
+
+  showPanel('none');
+  loadFiles();
+}
+
+function onDeviceDisconnected() {
+  state.connected = false;
+  state.files = [];
+  state.filtered = [];
+  state.selected.clear();
+
+  document.getElementById('device-name').textContent = 'No device connected';
+  document.getElementById('device-sub').textContent = 'Plug in your iPhone via USB';
+  setBadge('disconnected', 'Disconnected');
+  document.getElementById('storage-section').style.display = 'none';
+  document.getElementById('btn-refresh-files').style.display = 'none';
+
+  renderFileList();
+  showPanel('no-device');
+  updateSelectionInfo();
+}
+
+function onDeviceUntrusted() {
+  state.connected = false;
+  document.getElementById('device-name').textContent = 'iPhone (not trusted)';
+  document.getElementById('device-sub').textContent = 'Please tap Trust on your iPhone';
+  setBadge('untrusted', 'Trust needed');
+  showPanel('untrusted');
+}
+
+// ── Storage bar ───────────────────────────────────────────────────────
+
+function updateStorage(s) {
+  const total = s.total || 1;
+  const mediaPct = ((s.media_cache || 0) / total * 100).toFixed(1);
+  const usedPct  = (s.used / total * 100).toFixed(1);
+  const otherPct = Math.max(0, usedPct - mediaPct).toFixed(1);
+
+  document.getElementById('seg-media').style.width = mediaPct + '%';
+  document.getElementById('seg-other').style.width = otherPct + '%';
+
+  document.getElementById('storage-summary').textContent =
+    `${s.used_gb} GB used of ${s.total_gb} GB  ·  ${s.free_gb} GB free`;
+}
+
+// ── File loading ──────────────────────────────────────────────────────
+
+async function loadFiles() {
+  if (!state.connected) return;
+  showPanel('loading');
+  document.getElementById('file-list').innerHTML = '';
+
+  try {
+    const res = await fetch('/api/files');
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    state.files = data.files || [];
+    applyFilter();
+    showPanel(state.files.length === 0 ? 'empty' : 'none');
+    renderFileList();
+
+    const label = document.getElementById('file-count-label');
+    label.textContent = `${state.files.length} files  ·  ${data.transferred_count} transferred`;
+  } catch (err) {
+    toast('error', 'Could not load files', err.message);
+    showPanel('no-device');
+  }
+}
+
+// ── Filter & view ─────────────────────────────────────────────────────
+
+function setFilter(f) {
+  state.filter = f;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.filter === f);
+  });
+  applyFilter();
+  renderFileList();
+}
+
+function applyFilter() {
+  state.filtered = state.files.filter(f => {
+    if (state.filter === 'all')   return true;
+    if (state.filter === 'image') return f.type === 'image';
+    if (state.filter === 'video') return f.type === 'video';
+    if (state.filter === 'new')   return !f.transferred;
+    return true;
+  });
+}
+
+function setView(v) {
+  state.view = v;
+  document.getElementById('btn-grid-view').classList.toggle('active', v === 'grid');
+  document.getElementById('btn-list-view').classList.toggle('active', v === 'list');
+  const list = document.getElementById('file-list');
+  list.classList.toggle('list-view', v === 'list');
+}
+
+// ── File rendering ────────────────────────────────────────────────────
+
+function renderFileList() {
+  const list = document.getElementById('file-list');
+  list.innerHTML = '';
+
+  if (state.filtered.length === 0) {
+    if (state.files.length > 0) {
+      list.innerHTML = '<div style="padding:20px;color:var(--text-3);font-size:12px;text-align:center">No files match this filter</div>';
+    }
+    updateSelectionInfo();
+    return;
+  }
+
+  const frag = document.createDocumentFragment();
+  state.filtered.forEach(f => {
+    frag.appendChild(buildCard(f));
+  });
+  list.appendChild(frag);
+  updateSelectionInfo();
+}
+
+function buildCard(f) {
+  const card = document.createElement('div');
+  card.className = 'file-card' +
+    (state.selected.has(f.path) ? ' selected' : '') +
+    (f.transferred ? ' transferred' : '');
+  card.dataset.path = f.path;
+
+  const isVideo = f.type === 'video';
+  const thumbUrl = isVideo ? null : `/api/thumbnail?path=${encodeURIComponent(f.path)}`;
+
+  // Format date
+  const date = f.mtime ? new Date(f.mtime * 1000).toLocaleDateString() : '—';
+
+  card.innerHTML = `
+    <div class="thumb-wrap">
+      ${thumbUrl
+        ? `<img src="${thumbUrl}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" alt="">`
+        : ''}
+      <div class="thumb-icon" style="display:${thumbUrl ? 'none' : 'flex'}">${isVideo ? '🎬' : '🖼'}</div>
+    </div>
+    <div class="card-check">${state.selected.has(f.path) ? '✓' : ''}</div>
+    ${f.transferred ? '<span class="badge-done">✓ Done</span>' : ''}
+    ${isVideo && !f.transferred ? '<span class="type-badge">Video</span>' : ''}
+    <div class="card-meta">
+      <div class="card-name" title="${escHtml(f.filename)}">${escHtml(f.filename)}</div>
+      <div class="card-info">${f.size_mb} MB · ${date}</div>
+    </div>
+  `;
+
+  card.addEventListener('click', () => toggleSelect(f.path, card));
+  return card;
+}
+
+function toggleSelect(path, card) {
+  if (state.selected.has(path)) {
+    state.selected.delete(path);
+    card.classList.remove('selected');
+    card.querySelector('.card-check').textContent = '';
+  } else {
+    state.selected.add(path);
+    card.classList.add('selected');
+    card.querySelector('.card-check').textContent = '✓';
+  }
+  updateSelectionInfo();
+}
+
+function selectAll() {
+  state.filtered.forEach(f => state.selected.add(f.path));
+  rerenderChecks();
+  updateSelectionInfo();
+}
+
+function deselectAll() {
+  state.filtered.forEach(f => state.selected.delete(f.path));
+  rerenderChecks();
+  updateSelectionInfo();
+}
+
+function rerenderChecks() {
+  document.querySelectorAll('.file-card').forEach(card => {
+    const path = card.dataset.path;
+    const sel = state.selected.has(path);
+    card.classList.toggle('selected', sel);
+    card.querySelector('.card-check').textContent = sel ? '✓' : '';
+  });
+}
+
+function updateSelectionInfo() {
+  const n = state.selected.size;
+  const totalSize = state.filtered
+    .filter(f => state.selected.has(f.path))
+    .reduce((s, f) => s + f.size, 0);
+  const mb = (totalSize / 1024 / 1024).toFixed(1);
+
+  document.getElementById('selection-info').textContent =
+    n === 0 ? '0 files selected' : `${n} file${n !== 1 ? 's' : ''} selected  ·  ${mb} MB`;
+
+  document.getElementById('btn-transfer').disabled = n === 0 || !state.connected || state.transferring;
+}
+
+// ── Destination ───────────────────────────────────────────────────────
+
+async function browseDest() {
+  if (DEMO_MODE) {
+    document.getElementById('destination-input').value = '/Users/alex/Pictures/iPhone';
+    return;
+  }
+  if ('showDirectoryPicker' in window) {
+    try {
+      const dir = await window.showDirectoryPicker();
+      document.getElementById('destination-input').value = dir.name;
+      toast('warning', 'Tip', 'Browser directory picker gives only folder name. Paste the full path manually for best results.');
+    } catch (e) { /* user cancelled */ }
+  } else {
+    toast('warning', 'No folder picker', 'Type the full destination path manually in the box.');
+  }
+}
+
+// ── Transfer ──────────────────────────────────────────────────────────
+
+async function startTransfer() {
+  const dest = document.getElementById('destination-input').value.trim();
+  if (!dest) { toast('error', 'No destination', 'Enter a destination folder path.'); return; }
+  if (state.selected.size === 0) { toast('error', 'Nothing selected', 'Select at least one file.'); return; }
+
+  state.transferring = true;
+  updateSelectionInfo();
+
+  const overlay = document.getElementById('progress-overlay');
+  overlay.classList.add('visible');
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('progress-stats').textContent = 'Starting…';
+  document.getElementById('progress-filename').textContent = '';
+
+  // Remember which files we transferred so we can delete after
+  const toTransfer = [...state.selected];
+
+  try {
+    const res = await fetch('/api/transfer', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ files: toTransfer, destination: dest }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    // SSE events will handle the rest
+    window._transferDest = dest;
+    window._toTransfer = toTransfer;
+  } catch (err) {
+    state.transferring = false;
+    updateSelectionInfo();
+    overlay.classList.remove('visible');
+    toast('error', 'Transfer failed', err.message);
+  }
+}
+
+function onTransferProgress(d) {
+  document.getElementById('progress-bar').style.width = d.percent + '%';
+  document.getElementById('progress-stats').textContent =
+    `${d.done} / ${d.total} files  ·  ${d.percent}%  ·  ${capitalize(d.status)}: ${d.filename}`;
+  document.getElementById('progress-filename').textContent = d.filename;
+}
+
+function onTransferComplete(d) {
+  state.transferring = false;
+  document.getElementById('progress-overlay').classList.remove('visible');
+  updateSelectionInfo();
+
+  let msg = `${d.success_count} transferred`;
+  if (d.skipped_count) msg += `, ${d.skipped_count} skipped`;
+  if (d.failed_count)  msg += `, ${d.failed_count} failed`;
+  toast('success', 'Transfer complete', msg);
+
+  // Mark transferred in UI
+  state.files.forEach(f => {
+    if (state.selected.has(f.path)) f.transferred = true;
+  });
+
+  loadHistory();
+  renderFileList();
+
+  // Delete after transfer?
+  if (document.getElementById('delete-after-toggle').checked && d.success_count > 0) {
+    // Only offer to delete successfully transferred files
+    const successPaths = window._toTransfer || [];
+    showDeleteModal(successPaths.filter(p =>
+      !d.failed?.some(ff => ff.filename === state.files.find(f => f.path === p)?.filename)
+    ));
+  } else {
+    state.selected.clear();
+    rerenderChecks();
+    updateSelectionInfo();
+  }
+}
+
+function onTransferError(d) {
+  state.transferring = false;
+  document.getElementById('progress-overlay').classList.remove('visible');
+  updateSelectionInfo();
+  toast('error', 'Transfer error', d.error);
+}
+
+// ── Delete ────────────────────────────────────────────────────────────
+
+function showDeleteModal(paths) {
+  if (!paths || paths.length === 0) return;
+  state.pendingDelete = paths;
+
+  const fileList = document.getElementById('delete-file-list');
+  const names = paths.map(p => {
+    const f = state.files.find(ff => ff.path === p);
+    return f ? f.filename : p.split('/').pop();
+  });
+
+  fileList.innerHTML = names.map(n => `<div>• ${escHtml(n)}</div>`).join('');
+  document.getElementById('delete-modal').classList.add('visible');
+}
+
+function hideDeleteModal() {
+  document.getElementById('delete-modal').classList.remove('visible');
+  state.pendingDelete = [];
+  state.selected.clear();
+  rerenderChecks();
+  updateSelectionInfo();
+}
+
+async function confirmDelete() {
+  document.getElementById('delete-modal').classList.remove('visible');
+  const paths = state.pendingDelete;
+  state.pendingDelete = [];
+
+  try {
+    const res = await fetch('/api/delete', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ files: paths, confirmed: true }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+
+    toast('success', 'Deleted from iPhone',
+      `${data.success_count} file${data.success_count !== 1 ? 's' : ''} deleted.`);
+
+    if (data.failed_count > 0) {
+      toast('warning', `${data.failed_count} delete${data.failed_count !== 1 ? 's' : ''} failed`,
+        data.failed.map(f => f.path.split('/').pop()).join(', '));
+    }
+
+    // Remove deleted files from our list
+    const deleted = new Set(paths.filter((_, i) => !data.failed.some(f => f.path === paths[i])));
+    state.files = state.files.filter(f => !deleted.has(f.path));
+    applyFilter();
+    renderFileList();
+    loadHistory();
+
+  } catch (err) {
+    toast('error', 'Delete failed', err.message);
+  }
+
+  state.selected.clear();
+  rerenderChecks();
+  updateSelectionInfo();
+}
+
+// ── History ───────────────────────────────────────────────────────────
+
+async function loadHistory() {
+  try {
+    const res = await fetch('/api/history');
+    const data = await res.json();
+    renderHistory(data.history || [], data.stats || {});
+  } catch (e) { /* silent */ }
+}
+
+function renderHistory(items, stats) {
+  const list = document.getElementById('history-list');
+  const statsEl = document.getElementById('history-stats');
+
+  if (stats.total) {
+    const gb = ((stats.total_bytes || 0) / 1e9).toFixed(2);
+    statsEl.textContent = `${stats.total} files · ${gb} GB`;
+  } else {
+    statsEl.textContent = '';
+  }
+
+  if (items.length === 0) {
+    list.innerHTML = '<div class="history-empty">No transfers yet</div>';
+    return;
+  }
+
+  list.innerHTML = items.map(item => {
+    const d = new Date(item.transferred_at);
+    const dateStr = isNaN(d) ? item.transferred_at : d.toLocaleDateString();
+    const timeStr = isNaN(d) ? '' : d.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const mb = item.file_size ? (item.file_size / 1024 / 1024).toFixed(1) + ' MB' : '';
+    return `
+      <div class="history-item">
+        <div class="h-name" title="${escHtml(item.filename)}">${escHtml(item.filename)}</div>
+        <div class="h-meta">
+          <span>${dateStr} ${timeStr}</span>
+          ${mb ? `<span>${mb}</span>` : ''}
+        </div>
+        <div class="h-dest" title="${escHtml(item.destination)}">${escHtml(item.destination)}</div>
+        ${item.deleted_from_device ? '<div class="h-deleted">Deleted from iPhone</div>' : ''}
+      </div>`;
+  }).join('');
+}
+
+// ── Dependency check ──────────────────────────────────────────────────
+
+async function checkDeps() {
+  showPanel('no-device');
+  try {
+    const res = await fetch('/api/check_dependencies');
+    const data = await res.json();
+
+    if (data.ok) {
+      toast('success', 'Setup OK', 'All dependencies are installed.');
+      return;
+    }
+
+    const missing = data.missing || [];
+    const body = missing.map(m =>
+      `<strong>${m.name}</strong>: <code class="install-cmd" onclick="navigator.clipboard.writeText('${escHtml(m.install)}')" title="Click to copy">${escHtml(m.install)}</code>`
+    ).join('<br>');
+
+    document.getElementById('deps-title').textContent = 'Missing Dependencies';
+    document.getElementById('deps-body').innerHTML =
+      body || 'Some dependencies may be missing. See README for setup instructions.';
+    showPanel('deps');
+
+  } catch (e) {
+    toast('error', 'Check failed', e.message);
+  }
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────
+
+function showPanel(which) {
+  ['no-device', 'untrusted', 'loading', 'empty', 'deps'].forEach(id => {
+    document.getElementById('state-' + id).style.display = id === which ? '' : 'none';
+  });
+}
+
+function setBadge(type, text) {
+  const b = document.getElementById('device-status-badge');
+  b.textContent = text;
+  b.className = 'badge-' + type;
+}
+
+function toast(type, title, msg) {
+  const icons = { success: '✓', error: '✕', warning: '⚠' };
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.innerHTML = `
+    <span class="toast-icon">${icons[type] || 'ℹ'}</span>
+    <div class="toast-body">
+      <div class="toast-title">${escHtml(title)}</div>
+      ${msg ? `<div class="toast-msg">${escHtml(String(msg))}</div>` : ''}
+    </div>`;
+  document.getElementById('toast-container').prepend(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+function escHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function capitalize(s) {
+  return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────
+
+connectSSE();
+loadHistory();
+
+// Suggest default destination
+(function() {
+  const input = document.getElementById('destination-input');
+  if (DEMO_MODE) {
+    input.value = '/Users/alex/Pictures/iPhone';
+  } else {
+    input.placeholder = navigator.platform.startsWith('Win')
+      ? 'e.g.  C:\\Users\\you\\Pictures\\iPhone'
+      : 'e.g.  ~/Pictures/iPhone';
+  }
+})();
+</script>
+</body>
+</html>
