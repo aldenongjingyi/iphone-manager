@@ -31,19 +31,20 @@ jobs:
           cache: pip
 
       - name: Install Python dependencies
-        run: pip install pyinstaller flask pymobiledevice3
+        run: pip install pyinstaller flask pymobiledevice3 pillow pillow-heif adbutils
 
       - name: Build Python backend (macOS)
         if: runner.os == 'macOS'
         run: |
           pyinstaller \
             --onefile \
-            --name python-backend \
+            --name pindahan-backend \
             --collect-all pymobiledevice3 \
+            --collect-all pillow_heif \
             --add-data "iphone_manager/templates:iphone_manager/templates" \
             --add-data "iphone_manager/static:iphone_manager/static" \
             main.py
-          echo "Python backend size: $(du -sh dist/python-backend)"
+          echo "Python backend size: $(du -sh dist/pindahan-backend)"
 
       - name: Build Python backend (Windows)
         if: runner.os == 'Windows'
@@ -51,12 +52,13 @@ jobs:
         run: |
           pyinstaller `
             --onefile `
-            --name python-backend `
+            --name pindahan-backend `
             --collect-all pymobiledevice3 `
+            --collect-all pillow_heif `
             --add-data "iphone_manager/templates;iphone_manager/templates" `
             --add-data "iphone_manager/static;iphone_manager/static" `
             main.py
-          $size = (Get-Item dist\python-backend.exe).Length / 1MB
+          $size = (Get-Item dist\pindahan-backend.exe).Length / 1MB
           Write-Host "Python backend size: $([math]::Round($size,1)) MB"
 
       # ── Node / Electron ─────────────────────────────────────────────────────
@@ -124,14 +126,16 @@ jobs:
             Automatically built from the latest commit on `main`.
 
             ### macOS
-            1. Download **iPhone.Manager-*.dmg**
-            2. Open the .dmg and drag **iPhone Manager** to Applications
+            1. Download **Pindahan-*.dmg** (arm64 for Apple Silicon, x64 for Intel)
+            2. Open the .dmg and drag **Pindahan** to Applications
             3. First launch: right-click → **Open** to bypass Gatekeeper
 
             ### Windows
-            1. Download **iPhone.Manager-Setup-*.exe**
+            1. Download **Pindahan-Setup-*.exe**
             2. Run the installer
             3. If SmartScreen warns you: click **More info → Run anyway**
+            4. Requires Apple Mobile Device USB Driver (iTunes) for iPhone detection
+            5. Requires ADB in PATH for Android detection
           files: |
             artifacts/*.dmg
             artifacts/*.exe

@@ -44,6 +44,27 @@ def check_dependencies():
                 'optional': True,
             })
 
+    if platform.system() == 'Windows':
+        # pymobiledevice3 on Windows requires the Apple Mobile Device USB Driver,
+        # which ships with the win32 iTunes installer (NOT the Microsoft Store version).
+        try:
+            import subprocess
+            out = subprocess.run(
+                ['sc', 'query', 'Apple Mobile Device Service'],
+                capture_output=True, text=True, timeout=5
+            )
+            has_driver = 'RUNNING' in out.stdout
+        except Exception:
+            has_driver = False
+        result['apple_driver'] = has_driver
+        if not has_driver:
+            result['missing'].append({
+                'name': 'Apple Mobile Device USB Driver',
+                'install': 'Install iTunes from apple.com/itunes (win32, not Microsoft Store)',
+                'optional': False,
+                'windows_only': True,
+            })
+
     return result
 
 

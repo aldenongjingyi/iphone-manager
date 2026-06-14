@@ -1000,7 +1000,27 @@ function escHtml(s) {
 }
 
 // ── Boot ───────────────────────────────────────────────────────────────
+
+// On Windows, check for Apple Mobile Device USB Driver and warn if missing
+async function checkWindowsDeps() {
+  try {
+    const res = await fetch('/api/check_dependencies');
+    const d = await res.json();
+    if (d.missing && d.missing.length > 0) {
+      const driver = d.missing.find(m => m.windows_only);
+      if (driver) {
+        showNotice(
+          `<strong>Apple Mobile Device USB Driver not found.</strong> ` +
+          `iPhone detection requires iTunes (win32 version, not Microsoft Store). ` +
+          `<a href="https://www.apple.com/itunes/" target="_blank" style="color:var(--tx);text-decoration:underline">Download iTunes →</a>`
+        );
+      }
+    }
+  } catch (e) {}
+}
+
 connectSSE();
+if (document.body.classList.contains('platform-win')) checkWindowsDeps();
 
 // Default dest
 const destInput = document.getElementById('dest-input');
