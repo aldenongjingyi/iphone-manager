@@ -745,6 +745,6 @@ def main():
             webbrowser.open(url)
         threading.Thread(target=_open, daemon=True).start()
 
-    print(f'\n  iPhone Manager  →  {url}{mode}')
+    print(f'\n  iPhone Manager  ->  {url}{mode}')
     print('  Press Ctrl+C to stop.\n')
     app.run(host=HOST, port=PORT, debug=False, threaded=True, use_reloader=False)

@@ -47,7 +47,7 @@ async function waitForBackend (port, timeoutMs = 60000) {
   return new Promise((resolve, reject) => {
     const attempt = () => {
       if (Date.now() > deadline) {
-        return reject(new Error('Python backend did not start within 20 s.'));
+        return reject(new Error('Python backend did not start within 60 s.'));
       }
       const req = http.get(`http://127.0.0.1:${port}/api/device`, (res) => {
         if (res.statusCode === 200) return resolve();
