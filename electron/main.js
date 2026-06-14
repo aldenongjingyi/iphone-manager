@@ -33,16 +33,16 @@ function getPythonBinary () {
     const interpreter = process.platform === 'win32' ? 'python' : 'python3';
     return { bin: interpreter, args: [path.join(__dirname, '..', 'main.py')] };
   }
-  // Packaged: bundled binary in app's Resources folder
-  const name = process.platform === 'win32' ? 'pindahan-backend.exe' : 'pindahan-backend';
-  const bin  = path.join(process.resourcesPath, name);
+  // Packaged: --onedir bundle copied into Resources/pindahan-backend/
+  const exe  = process.platform === 'win32' ? 'pindahan-backend.exe' : 'pindahan-backend';
+  const bin  = path.join(process.resourcesPath, 'pindahan-backend', exe);
   if (!fs.existsSync(bin)) {
     throw new Error(`Python backend not found at: ${bin}`);
   }
   return { bin, args: [] };
 }
 
-async function waitForBackend (port, timeoutMs = 20000) {
+async function waitForBackend (port, timeoutMs = 60000) {
   const deadline = Date.now() + timeoutMs;
   return new Promise((resolve, reject) => {
     const attempt = () => {
@@ -60,6 +60,8 @@ async function waitForBackend (port, timeoutMs = 20000) {
   });
 }
 
+let _backendStderr = '';
+
 function startPythonBackend (port) {
   const { bin, args } = getPythonBinary();
   const env = { ...process.env, PORT: String(port), ELECTRON: '1' };
@@ -67,7 +69,11 @@ function startPythonBackend (port) {
   pythonProcess = spawn(bin, args, { env, windowsHide: true });
 
   pythonProcess.stdout.on('data', d => process.stdout.write(`[py] ${d}`));
-  pythonProcess.stderr.on('data', d => process.stderr.write(`[py] ${d}`));
+  pythonProcess.stderr.on('data', d => {
+    process.stderr.write(`[py] ${d}`);
+    _backendStderr += d.toString();
+    if (_backendStderr.length > 4000) _backendStderr = _backendStderr.slice(-4000);
+  });
 
   pythonProcess.on('error', (err) => {
     console.error('Python process error:', err);
@@ -150,9 +156,12 @@ app.whenReady().then(async () => {
     loadingWin.close();
   } catch (err) {
     loadingWin.close();
+    const detail = _backendStderr.trim()
+      ? `\n\nBackend output:\n${_backendStderr.trim().slice(-1500)}`
+      : '\n\nTry relaunching the app. If the problem persists, reinstall it.';
     await dialog.showErrorBox(
       'Failed to start Pindahan',
-      `${err.message}\n\nTry relaunching the app. If the problem persists, reinstall it.`,
+      `${err.message}${detail}`,
     );
     app.quit();
   }

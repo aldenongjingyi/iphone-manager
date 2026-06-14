@@ -21,6 +21,8 @@ mac:
   extraResources:
     - from: dist/pindahan-backend
       to: pindahan-backend
+      filter:
+        - "**/*"
 
 dmg:
   title: Pindahan
@@ -43,8 +45,10 @@ win:
     - target: nsis
       arch: [x64]
   extraResources:
-    - from: dist/pindahan-backend.exe
-      to: pindahan-backend.exe
+    - from: dist/pindahan-backend
+      to: pindahan-backend
+      filter:
+        - "**/*"
 
 nsis:
   oneClick: false

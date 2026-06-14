@@ -37,7 +37,7 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           pyinstaller \
-            --onefile \
+            --onedir \
             --name pindahan-backend \
             --collect-all pymobiledevice3 \
             --collect-all pillow_heif \
@@ -51,14 +51,14 @@ jobs:
         shell: pwsh
         run: |
           pyinstaller `
-            --onefile `
+            --onedir `
             --name pindahan-backend `
             --collect-all pymobiledevice3 `
             --collect-all pillow_heif `
             --add-data "iphone_manager/templates;iphone_manager/templates" `
             --add-data "iphone_manager/static;iphone_manager/static" `
             main.py
-          $size = (Get-Item dist\pindahan-backend.exe).Length / 1MB
+          $size = (Get-Item dist\pindahan-backend\pindahan-backend.exe).Length / 1MB
           Write-Host "Python backend size: $([math]::Round($size,1)) MB"
 
       # ── Node / Electron ─────────────────────────────────────────────────────
