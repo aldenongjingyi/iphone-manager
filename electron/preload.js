@@ -11,4 +11,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
   // Reveal a file in Finder / Explorer
   showInFolder: (filePath) => ipcRenderer.invoke('show-in-folder', filePath),
+
+  // Window controls (Windows custom titlebar)
+  minimize:    () => ipcRenderer.invoke('minimize-window'),
+  maximize:    () => ipcRenderer.invoke('maximize-window'),
+  closeWindow: () => ipcRenderer.invoke('close-window'),
 });

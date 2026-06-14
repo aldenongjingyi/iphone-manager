@@ -23,6 +23,7 @@ from . import database as db
 from . import device as dev
 from . import storage as stor
 from . import transfer as xfr
+from . import android_device as adev
 
 # ── config ────────────────────────────────────────────────────────────────────
 
@@ -79,7 +80,7 @@ def run_async(coro):
 
 # ── shared state ──────────────────────────────────────────────────────────────
 
-_state = {'lockdown': None, 'device_info': None, 'afc': None}
+_state = {'lockdown': None, 'device_info': None, 'afc': None, 'device_type': None}
 _state_lock = threading.Lock()
 
 _sse_queues: list[queue.Queue] = []
@@ -121,6 +122,7 @@ def _on_connected(lockdown, info):
         _state['lockdown'] = lockdown
         _state['device_info'] = info
         _state['afc'] = None
+        _state['device_type'] = 'ios'
 
     try:
         s = run_async(stor.get_storage_info(lockdown))
@@ -146,6 +148,31 @@ def _on_disconnected():
 def _on_untrusted(info):
     logger.info("Device not trusted — waiting for user to tap Trust")
     _broadcast('device_untrusted', info)
+
+
+def _on_android_connected(info):
+    storage = adev.get_android_storage(info['serial'])
+    if storage:
+        info = {**info, 'storage': storage}
+    with _state_lock:
+        _state['lockdown'] = None  # no lockdown for android
+        _state['device_info'] = info
+        _state['afc'] = None
+        _state['device_type'] = 'android'
+    logger.info(f"Android device connected: {info.get('name')} ({info.get('serial', '')})")
+    _broadcast('device_connected', info)
+
+
+def _on_android_disconnected():
+    with _state_lock:
+        if _state.get('device_type') != 'android':
+            return  # iOS is still connected, don't clear
+        _state['lockdown'] = None
+        _state['device_info'] = None
+        _state['afc'] = None
+        _state['device_type'] = None
+    logger.info("Android device disconnected")
+    _broadcast('device_disconnected', {})
 
 
 # ── routes ────────────────────────────────────────────────────────────────────
@@ -186,12 +213,27 @@ def api_files():
         return jsonify({'files': files, 'total': len(files),
                         'transferred_count': sum(1 for f in files if f['transferred'])})
 
+    with _state_lock:
+        device_type = _state.get('device_type')
+        device_info = _state.get('device_info')
+        udid = device_info.get('udid', '') if device_info else ''
+        serial = device_info.get('serial', '') if device_info else ''
+
+    if device_type == 'android':
+        try:
+            files = adev.list_android_media(serial)
+            transferred = db.get_transferred_files(udid)
+            for f in files:
+                f['transferred'] = f['path'] in transferred
+            return jsonify({'files': files, 'total': len(files),
+                            'transferred_count': sum(1 for f in files if f['transferred'])})
+        except Exception as e:
+            logger.error(f"Android list files error: {e}")
+            return jsonify({'error': str(e)}), 500
+
     afc = _get_afc()
     if not afc:
         return jsonify({'error': 'No device connected'}), 400
-
-    with _state_lock:
-        udid = _state['device_info'].get('udid', '') if _state['device_info'] else ''
 
     try:
         files      = run_async(xfr.list_media_files(afc))
@@ -216,6 +258,17 @@ def api_thumbnail():
         svg = _demo_thumbnail_svg(file_path)
         return Response(svg, mimetype='image/svg+xml',
                         headers={'Cache-Control': 'max-age=3600'})
+
+    with _state_lock:
+        device_type = _state.get('device_type')
+        serial = _state['device_info'].get('serial', '') if _state.get('device_info') else ''
+
+    if device_type == 'android':
+        data = adev.get_android_thumbnail(serial, file_path)
+        if data:
+            return Response(data, mimetype='image/jpeg',
+                            headers={'Cache-Control': 'max-age=3600'})
+        return ('', 404)
 
     afc = _get_afc()
     if not afc:
@@ -270,12 +323,57 @@ def api_transfer():
                          daemon=True).start()
         return jsonify({'status': 'started', 'total': len(selected)})
 
+    with _state_lock:
+        device_type = _state.get('device_type')
+        device_info = _state.get('device_info')
+        udid   = device_info.get('udid', '') if device_info else ''
+        serial = device_info.get('serial', '') if device_info else ''
+
+    if device_type == 'android':
+        try:
+            files_out = adev.list_android_media(serial)
+        except Exception as e:
+            return jsonify({'error': f'Cannot read Android device: {e}'}), 500
+
+        path_set = set(file_paths)
+        selected = [f for f in files_out if f['path'] in path_set]
+        if not selected:
+            return jsonify({'error': 'None of the selected paths were found on device'}), 400
+
+        already = db.get_transferred_files(udid)
+
+        def run_android():
+            def progress(done, total, filename, status):
+                _broadcast('transfer_progress', {
+                    'done': done, 'total': total, 'filename': filename,
+                    'status': status,
+                    'percent': round(done / total * 100, 1) if total else 0,
+                })
+            try:
+                results = adev.transfer_android_files(serial, selected, destination,
+                                                       already_transferred=already,
+                                                       progress_cb=progress)
+                total_bytes = results.get('total_bytes', 0)
+                for f in results['success']:
+                    db.record_transfer(udid, f['path'], f['filename'], f['dest_path'], f['size'])
+                _broadcast('transfer_complete', {
+                    'success_count': len(results['success']),
+                    'skipped_count': len(results['skipped']),
+                    'failed_count':  len(results['failed']),
+                    'failed': [{'filename': f['filename'], 'reason': f.get('reason', '')}
+                               for f in results['failed']],
+                    'total_bytes': total_bytes,
+                })
+            except Exception as e:
+                logger.error(f"Android transfer error: {e}")
+                _broadcast('transfer_error', {'error': str(e)})
+
+        threading.Thread(target=run_android, daemon=True, name='android-transfer').start()
+        return jsonify({'status': 'started', 'total': len(selected)})
+
     afc = _get_afc()
     if not afc:
         return jsonify({'error': 'No device connected'}), 400
-
-    with _state_lock:
-        udid = _state['device_info'].get('udid', '') if _state['device_info'] else ''
 
     try:
         all_files = run_async(xfr.list_media_files(afc))
@@ -339,12 +437,23 @@ def api_delete():
         time.sleep(0.4)
         return jsonify({'success_count': len(file_paths), 'failed_count': 0, 'failed': []})
 
+    with _state_lock:
+        device_type = _state.get('device_type')
+        device_info = _state.get('device_info')
+        udid   = device_info.get('udid', '') if device_info else ''
+        serial = device_info.get('serial', '') if device_info else ''
+
+    if device_type == 'android':
+        results = adev.delete_android_files(serial, file_paths)
+        for path in results['success']:
+            db.mark_deleted(udid, path)
+        return jsonify({'success_count': len(results['success']),
+                        'failed_count':  len(results['failed']),
+                        'failed':        results['failed']})
+
     afc = _get_afc()
     if not afc:
         return jsonify({'error': 'No device connected'}), 400
-
-    with _state_lock:
-        udid = _state['device_info'].get('udid', '') if _state['device_info'] else ''
 
     results = run_async(xfr.delete_files(afc, file_paths))
     for path in results['success']:
@@ -353,6 +462,43 @@ def api_delete():
     return jsonify({'success_count': len(results['success']),
                     'failed_count':  len(results['failed']),
                     'failed':        results['failed']})
+
+
+@app.route('/api/eject', methods=['POST'])
+def api_eject():
+    """Cleanly disconnect the current device and broadcast device_disconnected."""
+    with _state_lock:
+        afc = _state.get('afc')
+        lockdown = _state.get('lockdown')
+        device_type = _state.get('device_type', 'ios')
+
+    # Close connections gracefully
+    try:
+        if afc:
+            pass  # AFC doesn't have an explicit close in pymobiledevice3
+        if lockdown:
+            pass  # lockdown close is handled by GC
+    except Exception as e:
+        logger.debug(f"Eject close error: {e}")
+
+    # For Android: run adb disconnect
+    if device_type == 'android':
+        try:
+            import subprocess
+            subprocess.run(['adb', 'disconnect'], capture_output=True, timeout=3)
+        except Exception as e:
+            logger.debug(f"adb disconnect: {e}")
+
+    # Clear state and broadcast
+    with _state_lock:
+        _state['lockdown'] = None
+        _state['device_info'] = None
+        _state['afc'] = None
+        _state['device_type'] = None
+
+    logger.info("Device ejected by user")
+    _broadcast('device_disconnected', {})
+    return jsonify({'ok': True})
 
 
 @app.route('/api/history')
@@ -582,6 +728,12 @@ def main():
         poller.on_untrusted    = _on_untrusted
         poller.start()
         logger.info("Device poller started")
+
+        android_poller = adev.AndroidDevicePoller(interval=3)
+        android_poller.on_connected    = _on_android_connected
+        android_poller.on_disconnected = _on_android_disconnected
+        android_poller.start()
+        logger.info("Android poller started")
 
     url = f'http://127.0.0.1:{PORT}'
     mode = '  [DEMO — no iPhone needed]' if DEMO_MODE else ''

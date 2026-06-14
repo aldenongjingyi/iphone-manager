@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pindahan — Move Your Memories</title>
+  <meta name="description" content="Transfer every photo and video off your iPhone or Android — fast, fully local, no account required." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0A0A0B;
+      --surface: #0E0E10;
+      --panel: #141416;
+      --card: #19191C;
+      --card-hi: #212124;
+      --line: rgba(255,255,255,.08);
+      --line-2: rgba(255,255,255,.13);
+      --tx: #F4F4F5;
+      --tx-2: #9B9BA1;
+      --tx-3: #5E5E66;
+      --accent: #E4E4E7;
+      --grad: linear-gradient(118deg,#FFFFFF,#8A8A90);
+      --offwhite: #F4F4F5;
+      --font: 'Geist', -apple-system, system-ui, sans-serif;
+      --mono: 'Geist Mono', 'SF Mono', monospace;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      background: radial-gradient(125% 95% at 50% -8%, #161618 0%, #09090A 48%, #050506 100%) fixed;
+      font-family: var(--font);
+      color: var(--tx);
+      letter-spacing: -.01em;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    /* ───── NAV ───── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      height: 58px;
+      background: rgba(10,10,11,.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 28px;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .app-mark {
+      width: 26px;
+      height: 26px;
+      background: var(--grad);
+      border-radius: 7px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .app-mark svg { display: block; }
+
+    .wordmark {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+      color: var(--tx);
+    }
+
+    .nav-center {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .nav-link {
+      font-size: 12.5px;
+      color: var(--tx-2);
+      padding: 5px 12px;
+      border-radius: 999px;
+      transition: color .15s, background .15s;
+      cursor: pointer;
+    }
+
+    .nav-link:hover {
+      color: var(--tx);
+      background: rgba(255,255,255,.05);
+    }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11.5px;
+      color: var(--tx-2);
+      border: 1px solid var(--line-2);
+      border-radius: 999px;
+      padding: 5px 13px;
+      background: transparent;
+      cursor: pointer;
+      transition: color .15s, border-color .15s, background .15s;
+      font-family: var(--font);
+    }
+
+    .nav-pill:hover {
+      color: var(--tx);
+      border-color: rgba(255,255,255,.22);
+      background: rgba(255,255,255,.04);
+    }
+
+    /* ───── WRAPPER ───── */
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 28px;
+    }
+
+    /* ───── HERO ───── */
+    .hero {
+      padding: 120px 0 100px;
+    }
+
+    .hero-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      gap: 60px;
+    }
+
+    .hero-left {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid var(--line-2);
+      background: rgba(255,255,255,.04);
+      border-radius: 999px;
+      padding: 5px 12px;
+      font-family: var(--mono);
+      font-size: 11.5px;
+      letter-spacing: .14em;
+      color: var(--tx-2);
+      margin-bottom: 28px;
+    }
+
+    .hero-headline {
+      font-size: 78px;
+      font-weight: 700;
+      letter-spacing: -.052em;
+      line-height: .93;
+      color: var(--tx);
+    }
+
+    .hero-headline .period { color: var(--tx-2); }
+
+    .hero-subhead {
+      font-size: 18px;
+      color: var(--tx-2);
+      line-height: 1.6;
+      max-width: 480px;
+      margin-top: 22px;
+    }
+
+    .hero-cta {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 36px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--grad);
+      color: #141416;
+      border-radius: 12px;
+      padding: 13px 22px;
+      font-size: 14.5px;
+      font-weight: 650;
+      font-family: var(--font);
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 24px -8px rgba(255,255,255,.7), 0 0 0 1px rgba(255,255,255,.14) inset;
+      transition: transform .15s, box-shadow .15s;
+      text-decoration: none;
+      letter-spacing: -.01em;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 32px -8px rgba(255,255,255,.8), 0 0 0 1px rgba(255,255,255,.18) inset;
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--offwhite);
+      color: #141416;
+      border-radius: 12px;
+      padding: 13px 22px;
+      font-size: 14.5px;
+      font-weight: 650;
+      font-family: var(--font);
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 1px 0 rgba(255,255,255,.7) inset;
+      transition: transform .15s, box-shadow .15s;
+      text-decoration: none;
+      letter-spacing: -.01em;
+    }
+
+    .btn-secondary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 16px -4px rgba(255,255,255,.35), 0 1px 0 rgba(255,255,255,.7) inset;
+    }
+
+    .hero-meta {
+      margin-top: 18px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--tx-3);
+    }
+
+    /* ───── APP WINDOW MOCKUP ───── */
+    .hero-right {
+      flex: none;
+      width: 520px;
+    }
+
+    .app-window {
+      width: 520px;
+      background: #0E0E10;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 14px;
+      box-shadow: 0 50px 130px -30px rgba(0,0,0,.85), 0 0 0 1px rgba(255,255,255,.05);
+      overflow: hidden;
+    }
+
+    .window-bar {
+      height: 44px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      display: flex;
+      align-items: center;
+      padding: 0 14px;
+      gap: 8px;
+      background: linear-gradient(180deg,rgba(255,255,255,.02),transparent);
+    }
+
+    .traffic-lights {
+      display: flex;
+      gap: 6px;
+      margin-right: 4px;
+    }
+
+    .tl {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .tl-red { background: #E8705C; }
+    .tl-yellow { background: #E9B44B; }
+    .tl-green { background: #74BE5C; }
+
+    .window-app-mark {
+      width: 20px;
+      height: 20px;
+      background: var(--grad);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .window-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--tx);
+      letter-spacing: -.02em;
+    }
+
+    .window-spacer { flex: 1; }
+
+    .connected-badge {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--mono);
+      font-size: 10.5px;
+      color: var(--tx-2);
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 999px;
+      padding: 3px 9px;
+    }
+
+    .connected-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #74BE5C;
+      flex-shrink: 0;
+    }
+
+    .window-body {
+      padding: 12px;
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 8px;
+    }
+
+    .photo-tile {
+      aspect-ratio: 4/5;
+      border-radius: 8px;
+      position: relative;
+      overflow: hidden;
+      opacity: 0;
+      transform: translateY(6px);
+      animation: tileIn .4s ease forwards;
+    }
+
+    @keyframes tileIn {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .photo-tile:nth-child(1)  { animation-delay: .05s; background: hsl(240 4% 10%); }
+    .photo-tile:nth-child(2)  { animation-delay: .10s; background: hsl(240 4% 12%); }
+    .photo-tile:nth-child(3)  { animation-delay: .15s; background: hsl(240 4% 11%); }
+    .photo-tile:nth-child(4)  { animation-delay: .20s; background: hsl(240 4% 14%); }
+    .photo-tile:nth-child(5)  { animation-delay: .25s; background: hsl(240 4% 13%); }
+    .photo-tile:nth-child(6)  { animation-delay: .30s; background: hsl(240 4% 16%); }
+    .photo-tile:nth-child(7)  { animation-delay: .35s; background: hsl(240 4% 15%); }
+    .photo-tile:nth-child(8)  { animation-delay: .40s; background: hsl(240 4% 17%); }
+    .photo-tile:nth-child(9)  { animation-delay: .45s; background: hsl(240 4% 18%); }
+    .photo-tile:nth-child(10) { animation-delay: .50s; background: hsl(240 4% 20%); }
+    .photo-tile:nth-child(11) { animation-delay: .55s; background: hsl(240 4% 19%); }
+    .photo-tile:nth-child(12) { animation-delay: .60s; background: hsl(240 4% 22%); }
+    .photo-tile:nth-child(13) { animation-delay: .65s; background: hsl(240 4% 21%); }
+    .photo-tile:nth-child(14) { animation-delay: .70s; background: hsl(240 4% 13%); }
+    .photo-tile:nth-child(15) { animation-delay: .75s; background: hsl(240 4% 11%); }
+    .photo-tile:nth-child(16) { animation-delay: .80s; background: hsl(240 4% 16%); }
+    .photo-tile:nth-child(17) { animation-delay: .85s; background: hsl(240 4% 14%); }
+    .photo-tile:nth-child(18) { animation-delay: .90s; background: hsl(240 4% 12%); }
+
+    /* subtle inner gradient overlay */
+    .photo-tile::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(160deg, rgba(255,255,255,.04) 0%, transparent 60%);
+    }
+
+    .tile-check {
+      position: absolute;
+      top: 5px;
+      left: 5px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+
+    .tile-check svg { display: block; }
+
+    .tile-selected {
+      outline: 1.5px solid rgba(255,255,255,.5);
+      outline-offset: -1.5px;
+    }
+
+    .tile-saved {
+      position: absolute;
+      bottom: 5px;
+      left: 5px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,.16);
+      backdrop-filter: blur(6px);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-family: var(--mono);
+      font-size: 9px;
+      color: var(--tx);
+      z-index: 2;
+    }
+
+    .saved-dot {
+      width: 5px;
+      height: 5px;
+      border-radius: 50%;
+      background: #74BE5C;
+      flex-shrink: 0;
+    }
+
+    .window-footer {
+      padding: 0 12px 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .window-footer-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--tx-2);
+    }
+
+    .transfer-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      background: var(--grad);
+      color: #141416;
+      border-radius: 7px;
+      padding: 5px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      font-family: var(--font);
+      border: none;
+      cursor: pointer;
+      letter-spacing: -.01em;
+    }
+
+    /* ───── SECTION COMMON ───── */
+    .section-header {
+      text-align: center;
+      margin-bottom: 52px;
+    }
+
+    .section-title {
+      font-size: 30px;
+      font-weight: 600;
+      letter-spacing: -.025em;
+      color: var(--tx);
+    }
+
+    .section-sub {
+      font-size: 15px;
+      color: var(--tx-2);
+      margin-top: 10px;
+    }
+
+    /* ───── FEATURES ───── */
+    .features {
+      padding: 80px 0;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      max-width: 960px;
+      margin: 0 auto;
+    }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 22px;
+      transition: border-color .15s, transform .15s;
+    }
+
+    .feature-card:hover {
+      border-color: var(--line-2);
+      transform: translateY(-2px);
+    }
+
+    .feature-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(255,255,255,.12), rgba(255,255,255,.04));
+      border: 1px solid rgba(255,255,255,.18);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      flex-shrink: 0;
+    }
+
+    .feature-title {
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: -.015em;
+      margin-bottom: 7px;
+      color: var(--tx);
+    }
+
+    .feature-body {
+      font-size: 13.5px;
+      color: var(--tx-2);
+      line-height: 1.55;
+    }
+
+    .feature-link {
+      color: var(--tx-2);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color .15s;
+    }
+
+    .feature-link:hover { color: var(--tx); }
+
+    /* ───── HOW IT WORKS ───── */
+    .how-it-works {
+      padding: 80px 0;
+    }
+
+    .steps-row {
+      display: flex;
+      align-items: flex-start;
+      max-width: 780px;
+      margin: 0 auto;
+    }
+
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      flex: 1;
+    }
+
+    .step-number {
+      width: 56px;
+      height: 56px;
+      border: 1px solid rgba(255,255,255,.16);
+      background: var(--card);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--tx-2);
+      flex-shrink: 0;
+    }
+
+    .step-title {
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 14px;
+      letter-spacing: -.015em;
+    }
+
+    .step-body {
+      font-size: 13px;
+      color: var(--tx-2);
+      line-height: 1.5;
+      max-width: 180px;
+      margin-top: 6px;
+    }
+
+    .step-connector {
+      flex: 1;
+      height: 1px;
+      border-top: 1px dashed rgba(255,255,255,.12);
+      margin-top: 28px;
+    }
+
+    /* ───── DOWNLOAD ───── */
+    .download {
+      padding: 80px 0;
+    }
+
+    .download-cards {
+      display: flex;
+      gap: 16px;
+      max-width: 680px;
+      margin: 40px auto 0;
+    }
+
+    .dl-card {
+      flex: 1;
+      background: var(--card);
+      border: 1px solid var(--line-2);
+      border-radius: 14px;
+      padding: 28px;
+    }
+
+    .dl-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin-top: 14px;
+      letter-spacing: -.02em;
+    }
+
+    .dl-sub {
+      font-family: var(--mono);
+      font-size: 12.5px;
+      color: var(--tx-2);
+      margin-top: 5px;
+    }
+
+    .dl-compat {
+      font-family: var(--mono);
+      font-size: 11.5px;
+      color: var(--tx-3);
+      margin-top: 3px;
+    }
+
+    .dl-btn-primary {
+      display: block;
+      width: 100%;
+      text-align: center;
+      background: var(--grad);
+      color: #141416;
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 14px;
+      font-weight: 650;
+      font-family: var(--font);
+      letter-spacing: -.01em;
+      margin-top: 18px;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 8px 24px -8px rgba(255,255,255,.7), 0 0 0 1px rgba(255,255,255,.14) inset;
+      transition: transform .15s, box-shadow .15s;
+      text-decoration: none;
+    }
+
+    .dl-btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 32px -8px rgba(255,255,255,.8), 0 0 0 1px rgba(255,255,255,.18) inset;
+    }
+
+    .dl-btn-secondary {
+      display: block;
+      width: 100%;
+      text-align: center;
+      background: var(--card-hi);
+      border: 1px solid var(--line-2);
+      color: var(--tx);
+      border-radius: 10px;
+      padding: 13px;
+      font-size: 14px;
+      font-weight: 600;
+      font-family: var(--font);
+      letter-spacing: -.01em;
+      margin-top: 18px;
+      cursor: pointer;
+      transition: transform .15s, border-color .15s;
+      text-decoration: none;
+    }
+
+    .dl-btn-secondary:hover {
+      transform: translateY(-1px);
+      border-color: rgba(255,255,255,.2);
+    }
+
+    .download-meta {
+      text-align: center;
+      margin-top: 24px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--tx-3);
+    }
+
+    /* ───── FOOTER ───── */
+    footer {
+      border-top: 1px solid var(--line);
+      padding: 40px 0;
+    }
+
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 0 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .footer-brand {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .footer-wordmark {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -.02em;
+    }
+
+    .footer-tagline {
+      font-size: 13px;
+      color: var(--tx-3);
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .footer-link {
+      font-size: 12.5px;
+      color: var(--tx-3);
+      transition: color .15s;
+    }
+
+    .footer-link:hover { color: var(--tx-2); }
+
+    /* ───── RESPONSIVE ───── */
+    @media (max-width: 900px) {
+      .hero-headline { font-size: 58px; }
+      .hero-right { width: 440px; }
+      .app-window { width: 440px; }
+    }
+
+    @media (max-width: 768px) {
+      nav { padding: 0 18px; }
+      .nav-center { display: none; }
+
+      .hero-inner {
+        flex-direction: column;
+        padding: 0 18px;
+        gap: 48px;
+      }
+
+      .hero { padding: 72px 0 64px; }
+
+      .hero-headline { font-size: 48px; }
+      .hero-subhead { font-size: 16px; }
+
+      .hero-right {
+        width: 100%;
+        order: -1;
+      }
+
+      .app-window {
+        width: 100%;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+
+      .features-grid {
+        grid-template-columns: repeat(2, 1fr);
+        padding: 0 18px;
+      }
+
+      .container { padding: 0 18px; }
+
+      .steps-row {
+        flex-direction: column;
+        align-items: center;
+        gap: 32px;
+        padding: 0 18px;
+      }
+
+      .step-connector {
+        width: 1px;
+        height: 32px;
+        border-top: none;
+        border-left: 1px dashed rgba(255,255,255,.12);
+        margin-top: 0;
+        flex: none;
+      }
+
+      .download-cards {
+        flex-direction: column;
+        padding: 0 18px;
+      }
+
+      .footer-inner {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 20px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .hero-headline { font-size: 38px; }
+      .features-grid { grid-template-columns: 1fr; }
+      .hero-cta { flex-direction: column; align-items: flex-start; }
+      .btn-primary, .btn-secondary { width: 100%; justify-content: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ───── NAV ───── -->
+<nav>
+  <div class="nav-left">
+    <div class="app-mark">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M7 11V3M7 3L4 6M7 3L10 6" stroke="#141416" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <span class="wordmark">Pindahan</span>
+  </div>
+
+  <div class="nav-center">
+    <a class="nav-link" href="#features">Features</a>
+    <a class="nav-link" href="#how-it-works">How it works</a>
+    <a class="nav-link" href="#download">Download</a>
+  </div>
+
+  <div class="nav-right">
+    <a href="#download" class="nav-pill">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+        <path d="M5.5 1a4.5 4.5 0 1 0 0 9 4.5 4.5 0 0 0 0-9zM3.5 5.5c0-.55.19-1.06.5-1.46V7a2 2 0 0 1-.5-1.5zm2 2a2 2 0 0 1-1-.27V3.77a2 2 0 0 1 2 0v3.46a2 2 0 0 1-1 .27zm1-.27V3.77a2 2 0 0 1 .5 3.23-.5-.41-.5-1.5z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"/>
+      </svg>
+      macOS
+    </a>
+    <a href="#download" class="nav-pill">
+      <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+        <rect x="1" y="1" width="4" height="4" rx=".6" fill="currentColor"/>
+        <rect x="6" y="1" width="4" height="4" rx=".6" fill="currentColor"/>
+        <rect x="1" y="6" width="4" height="4" rx=".6" fill="currentColor"/>
+        <rect x="6" y="6" width="4" height="4" rx=".6" fill="currentColor"/>
+      </svg>
+      Windows
+    </a>
+  </div>
+</nav>
+
+<!-- ───── HERO ───── -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-left">
+
+      <div class="hero-eyebrow">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M6 1.5v7M6 1.5L3.5 4M6 1.5L8.5 4M1.5 9.5h9" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        PHOTO &amp; VIDEO TRANSFER
+      </div>
+
+      <h1 class="hero-headline">
+        Move your<br>memories<span class="period">.</span>
+      </h1>
+
+      <p class="hero-subhead">
+        Transfer every photo and video off your iPhone or Android — fast, fully local, no account required.
+      </p>
+
+      <div class="hero-cta">
+        <a href="https://github.com/aldenongjingyi/iphone-manager/releases/latest" target="_blank" rel="noopener" class="btn-primary">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M7 1.167C3.78 1.167 1.167 3.78 1.167 7c0 2.578 1.672 4.764 3.99 5.534.292.054.399-.127.399-.282 0-.14-.005-.505-.008-.99-1.624.352-1.967-.783-1.967-.783-.265-.675-.648-.854-.648-.854-.530-.362.040-.355.040-.355.586.041.895.602.895.602.521.892 1.368.634 1.701.485.053-.377.204-.634.371-.780-1.296-.147-2.659-.648-2.659-2.884 0-.637.228-1.158.601-1.566-.060-.148-.261-.741.058-1.545 0 0 .490-.157 1.605.598A5.59 5.59 0 0 1 7 4.71c.496.002.996.067 1.462.196 1.114-.755 1.603-.598 1.603-.598.320.804.119 1.397.059 1.545.375.408.600.929.600 1.566 0 2.242-1.366 2.735-2.666 2.879.209.181.396.537.396 1.082 0 .781-.007 1.411-.007 1.603 0 .156.105.339.401.281A5.84 5.84 0 0 0 12.833 7C12.833 3.78 10.22 1.167 7 1.167z" fill="#141416"/>
+          </svg>
+          Download for Mac
+        </a>
+        <a href="https://github.com/aldenongjingyi/iphone-manager/releases/latest" target="_blank" rel="noopener" class="btn-secondary">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <rect x="1.5" y="1.5" width="5" height="5" rx=".7" fill="#141416"/>
+            <rect x="7.5" y="1.5" width="5" height="5" rx=".7" fill="#141416"/>
+            <rect x="1.5" y="7.5" width="5" height="5" rx=".7" fill="#141416"/>
+            <rect x="7.5" y="7.5" width="5" height="5" rx=".7" fill="#141416"/>
+          </svg>
+          Download for Windows
+        </a>
+      </div>
+
+      <p class="hero-meta">Free · No account · macOS 13+ · Windows 11 · iPhone &amp; Android</p>
+
+    </div>
+
+    <!-- App Window Mockup -->
+    <div class="hero-right">
+      <div class="app-window">
+        <div class="window-bar">
+          <div class="traffic-lights">
+            <div class="tl tl-red"></div>
+            <div class="tl tl-yellow"></div>
+            <div class="tl tl-green"></div>
+          </div>
+          <div class="window-app-mark">
+            <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+              <path d="M5.5 9V2M5.5 2L3 4.5M5.5 2L8 4.5" stroke="#141416" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <span class="window-title">Pindahan</span>
+          <div class="window-spacer"></div>
+          <div class="connected-badge">
+            <div class="connected-dot"></div>
+            Connected · Alden's iPhone
+          </div>
+        </div>
+
+        <div class="window-body">
+          <!-- Tile 1 — selected -->
+          <div class="photo-tile tile-selected">
+            <div class="tile-check">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+                <path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="#141416" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <!-- Tile 2 — selected -->
+          <div class="photo-tile tile-selected">
+            <div class="tile-check">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+                <path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="#141416" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <!-- Tile 3 — selected + saved badge -->
+          <div class="photo-tile tile-selected">
+            <div class="tile-check">
+              <svg width="9" height="9" viewBox="0 0 9 9" fill="none">
+                <path d="M1.5 4.5L3.5 6.5L7.5 2.5" stroke="#141416" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div class="tile-saved">
+              <div class="saved-dot"></div>
+              Saved
+            </div>
+          </div>
+          <!-- Tiles 4–18 — plain -->
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+          <div class="photo-tile"></div>
+        </div>
+
+        <div class="window-footer">
+          <span class="window-footer-label">3 selected · 47.2 MB</span>
+          <button class="transfer-btn">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+              <path d="M5 8.5V1.5M5 1.5L2.5 4M5 1.5L7.5 4" stroke="#141416" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            Transfer 3
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───── FEATURES ───── -->
+<section class="features" id="features">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Everything you need, nothing you don't</h2>
+      <p class="section-sub">Built for simplicity. Designed for privacy.</p>
+    </div>
+
+    <div class="features-grid">
+
+      <!-- 1 Fully local -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M9 1.5L3 4.5V9c0 3.314 2.686 6 6 6s6-2.686 6-6V4.5L9 1.5z" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-linejoin="round"/>
+            <path d="M6.5 9l2 2L12 7" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="feature-title">Fully local</div>
+        <div class="feature-body">Your photos never touch a server. Everything happens directly between your device and this computer.</div>
+      </div>
+
+      <!-- 2 iPhone & Android -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="5" y="1.5" width="8" height="15" rx="2" stroke="rgba(255,255,255,.7)" stroke-width="1.3"/>
+            <path d="M7.5 14h3" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feature-title">iPhone &amp; Android</div>
+        <div class="feature-body">Works with USB-connected iPhones via pymobiledevice3 and Android phones via ADB.</div>
+      </div>
+
+      <!-- 3 Delete-safe -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="3.5" y="7" width="11" height="9" rx="1.5" stroke="rgba(255,255,255,.7)" stroke-width="1.3"/>
+            <path d="M6 7V5a3 3 0 0 1 6 0v2" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-linecap="round"/>
+            <path d="M9 10.5v2" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feature-title">Delete-safe</div>
+        <div class="feature-body">A multi-step confirmation flow ensures nothing is deleted without your explicit acknowledgement.</div>
+      </div>
+
+      <!-- 4 Fast transfers -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M10.5 2L5 10h7L7.5 16" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="feature-title">Fast transfers</div>
+        <div class="feature-body">Direct USB connection — no Wi-Fi, no Bluetooth, no bottlenecks. Full USB 3 speed.</div>
+      </div>
+
+      <!-- 5 All formats -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <rect x="2" y="3.5" width="14" height="11" rx="2" stroke="rgba(255,255,255,.7)" stroke-width="1.3"/>
+            <circle cx="6.5" cy="7.5" r="1.2" stroke="rgba(255,255,255,.7)" stroke-width="1.1"/>
+            <path d="M2.5 12.5l3.5-3 3 2.5 2.5-3L16 12.5" stroke="rgba(255,255,255,.7)" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <div class="feature-title">All formats</div>
+        <div class="feature-body">HEIC, JPG, PNG, MOV, MP4 — originals transferred as-is, no conversion.</div>
+      </div>
+
+      <!-- 6 Open source -->
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+            <path d="M6 12l-4-3 4-3" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 6l4 3-4 3" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M10.5 4.5l-3 9" stroke="rgba(255,255,255,.7)" stroke-width="1.3" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="feature-title">Open source</div>
+        <div class="feature-body">MIT licensed. Inspect the code, contribute, or fork it. <a href="https://github.com/aldenongjingyi/iphone-manager" target="_blank" rel="noopener" class="feature-link">View on GitHub →</a></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ───── HOW IT WORKS ───── -->
+<section class="how-it-works" id="how-it-works">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title">Three steps. That's it.</h2>
+      <p class="section-sub">From box to backed up in under a minute.</p>
+    </div>
+
+    <div class="steps-row">
+
+      <div class="step">
+        <div class="step-number">01</div>
+        <div class="step-title">Plug in</div>
+        <div class="step-body">Connect your iPhone or Android via USB. Trust the prompt.</div>
+      </div>
+
+      <div class="step-connector"></div>
+
+      <div class="step">
+        <div class="step-number">02</div>
+        <div class="step-title">Select</div>
+        <div class="step-body">Browse and select the photos &amp; videos you want to keep.</div>
+      </div>
+
+      <div class="step-connector"></div>
+
+      <div class="step">
+        <div class="step-number">03</div>
+        <div class="step-title">Transfer</div>
+        <div class="step-body">Hit Transfer. Files land in your chosen folder. Done.</div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ───── DOWNLOAD ───── -->
+<section class="download" id="download">
+  <div class="container">
+    <div class="section-header">
+      <h2 class="section-title" style="font-size:32px;">Ready to move your memories?</h2>
+      <p class="section-sub">Free. No account. No cloud.</p>
+    </div>
+
+    <div class="download-cards">
+
+      <!-- Mac -->
+      <div class="dl-card">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <path d="M19.22 14.9c-.03-3.13 2.56-4.64 2.68-4.72-1.46-2.14-3.73-2.43-4.55-2.47-1.94-.2-3.78 1.14-4.76 1.14-.98 0-2.51-1.11-4.12-1.08-2.12.03-4.08 1.23-5.17 3.12-2.2 3.82-.57 9.5 1.59 12.61 1.05 1.52 2.31 3.23 3.95 3.17 1.59-.07 2.19-1.03 4.11-1.03 1.92 0 2.46 1.03 4.14 1 1.71-.03 2.79-1.55 3.83-3.08a12.9 12.9 0 0 0 1.74-3.56c-.04-.02-3.41-1.31-3.44-5.1zM16.09 5.7c.87-1.06 1.46-2.53 1.3-4a5.83 5.83 0 0 0-3.76 1.95c-.83.96-1.55 2.47-1.36 3.93 1.48.11 2.96-.75 3.82-1.88z" fill="rgba(155,155,161,.7)"/>
+        </svg>
+        <div class="dl-title">macOS</div>
+        <div class="dl-sub">macOS 13 Ventura or later</div>
+        <div class="dl-compat">Apple Silicon &amp; Intel</div>
+        <a href="https://github.com/aldenongjingyi/iphone-manager/releases/latest" target="_blank" rel="noopener" class="dl-btn-primary">Download .dmg</a>
+      </div>
+
+      <!-- Windows -->
+      <div class="dl-card">
+        <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+          <rect x="3" y="3" width="10.5" height="10.5" rx="1" fill="rgba(255,255,255,.75)"/>
+          <rect x="14.5" y="3" width="10.5" height="10.5" rx="1" fill="rgba(255,255,255,.75)"/>
+          <rect x="3" y="14.5" width="10.5" height="10.5" rx="1" fill="rgba(255,255,255,.75)"/>
+          <rect x="14.5" y="14.5" width="10.5" height="10.5" rx="1" fill="rgba(255,255,255,.75)"/>
+        </svg>
+        <div class="dl-title">Windows</div>
+        <div class="dl-sub">Windows 11 · x64</div>
+        <div class="dl-compat">64-bit installer</div>
+        <a href="https://github.com/aldenongjingyi/iphone-manager/releases/latest" target="_blank" rel="noopener" class="dl-btn-secondary">Download .exe</a>
+      </div>
+
+    </div>
+
+    <p class="download-meta">v0.1.0 · MIT License · <a href="https://github.com/aldenongjingyi/iphone-manager" target="_blank" rel="noopener" style="color:var(--tx-3);text-decoration:underline;text-underline-offset:2px;transition:color .15s;" onmouseover="this.style.color='var(--tx-2)'" onmouseout="this.style.color='var(--tx-3)'">Source on GitHub</a></p>
+
+  </div>
+</section>
+
+<!-- ───── FOOTER ───── -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-left">
+      <div class="app-mark">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M7 11V3M7 3L4 6M7 3L10 6" stroke="#141416" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <div class="footer-brand">
+        <span class="footer-wordmark">Pindahan</span>
+        <span class="footer-tagline">Move your memories.</span>
+      </div>
+    </div>
+
+    <div class="footer-links">
+      <a href="https://github.com/aldenongjingyi/iphone-manager" target="_blank" rel="noopener" class="footer-link">GitHub</a>
+      <a href="https://github.com/aldenongjingyi/iphone-manager/blob/main/LICENSE" target="_blank" rel="noopener" class="footer-link">MIT License</a>
+      <a href="https://github.com/aldenongjingyi/iphone-manager/issues" target="_blank" rel="noopener" class="footer-link">Issues</a>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

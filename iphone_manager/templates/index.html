@@ -45,6 +45,19 @@
         Refresh
       </button>
     </div>
+
+    <!-- Windows controls (only visible on platform-win via CSS) -->
+    <div class="tb-win-controls">
+      <button class="tb-win-btn" onclick="window.electronAPI && window.electronAPI.minimize()" title="Minimize">
+        <svg width="12" height="12" viewBox="0 0 12 1" fill="none"><line x1="0" y1=".5" x2="12" y2=".5" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <button class="tb-win-btn" onclick="window.electronAPI && window.electronAPI.maximize()" title="Maximize">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none"><rect x=".75" y=".75" width="9.5" height="9.5" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+      </button>
+      <button class="tb-win-btn close" onclick="window.electronAPI && window.electronAPI.closeWindow()" title="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+    </div>
   </div>
 
   <!-- ── Screen container ─────────────────────────────────────────── -->
@@ -59,7 +72,7 @@
           <span class="connect-eyebrow-text">Photo &amp; Video Transfer</span>
         </div>
         <h1 class="connect-headline">Move your<br>memories<span class="connect-period">.</span></h1>
-        <p class="connect-sub">Plug your iPhone into this Mac and Pindahan pulls every photo and video across — fast, fully local, and entirely yours to keep.</p>
+        <p class="connect-sub">Plug your iPhone or Android phone into this Mac and Pindahan pulls every photo and video across — fast, fully local, and entirely yours to keep.</p>
         <div class="connect-cta-row">
           <button class="btn-connect" onclick="onConnectClick()">
             <svg width="17" height="17" viewBox="0 0 18 18" fill="none"><rect x="2.5" y="6" width="9" height="6" rx="2" stroke="#141416" stroke-width="1.7"/><path d="M11.5 7.6h2.6a1.4 1.4 0 0 1 1.4 1.4v0a1.4 1.4 0 0 1-1.4 1.4h-2.6" stroke="#141416" stroke-width="1.7" stroke-linecap="round"/></svg>
@@ -75,6 +88,10 @@
           <span class="connect-pill">
             <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1.5" y="1.5" width="3.6" height="3.6" rx=".7" fill="currentColor"/><rect x="6.9" y="1.5" width="3.6" height="3.6" rx=".7" fill="currentColor"/><rect x="1.5" y="6.9" width="3.6" height="3.6" rx=".7" fill="currentColor"/><rect x="6.9" y="6.9" width="3.6" height="3.6" rx=".7" fill="currentColor"/></svg>
             Windows 11
+          </span>
+          <span class="connect-pill">
+            <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 8.5h8M3 8.5V5.5a3 3 0 0 1 6 0v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><circle cx="3.5" cy="3" r=".7" fill="currentColor"/><circle cx="8.5" cy="3" r=".7" fill="currentColor"/></svg>
+            Android 9+
           </span>
           <span class="connect-pill">
             <svg width="14" height="12" viewBox="0 0 14 12" fill="none"><rect x="2" y="3.4" width="8" height="5.2" rx="2.6" stroke="currentColor" stroke-width="1.2"/><path d="M10 5h2.2a1 1 0 0 1 1 1v0a1 1 0 0 1-1 1H10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
@@ -392,7 +409,7 @@ const st = {
   files: [], filtered: [],
   selected: new Set(),
   filter: 'all', view: 'grid',
-  connected: false, deviceName: 'iPhone',
+  connected: false, deviceName: 'iPhone', deviceType: 'ios',
   deleteAfter: false, deleteAck: false,
   xferPaths: [],      // paths being transferred
   xferResult: null,   // transfer_complete data
@@ -437,9 +454,13 @@ function connectSSE() {
 function onDeviceConnected(info) {
   st.connected = true;
   st.deviceName = info.name || 'iPhone';
+  st.deviceType = info.device_type || 'ios';
   document.getElementById('tb-device-name').textContent = st.deviceName;
+  const osLabel = st.deviceType === 'android' ? 'Android' : 'iOS';
+  const osVersion = info.ios_version || '—';
+  const model = st.deviceType === 'android' ? (info.model || '') : friendlyModel(info.product_type);
   document.getElementById('tb-device-sub').textContent =
-    `iOS ${info.ios_version || '—'} · ${friendlyModel(info.product_type)}`;
+    `${osLabel} ${osVersion}${model ? ' · ' + model : ''}`;
   document.getElementById('tb-device-chip').classList.add('visible');
   document.getElementById('tb-right').classList.add('visible');
   document.getElementById('connect-notice').classList.remove('visible');
@@ -905,7 +926,10 @@ function backToLibrary() {
   showScreen('library');
 }
 
-function ejectDevice() {
+async function ejectDevice() {
+  try {
+    await fetch('/api/eject', { method: 'POST' });
+  } catch (e) {}
   onDeviceDisconnected();
 }
 

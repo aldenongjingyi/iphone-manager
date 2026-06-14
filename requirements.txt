@@ -2,3 +2,6 @@ flask>=3.0.0
 pymobiledevice3>=4.0.0
 Pillow>=10.0.0
 pillow-heif>=0.16.0
+
+# Android support (optional — requires adb in PATH)
+adbutils>=2.0

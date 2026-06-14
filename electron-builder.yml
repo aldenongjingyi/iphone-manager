@@ -1,6 +1,6 @@
-appId: com.aldenongjingyi.iphone-manager
-productName: iPhone Manager
-copyright: Copyright © 2025 aldenongjingyi
+appId: com.pindahan.app
+productName: Pindahan
+copyright: Copyright © 2025 Pindahan
 
 directories:
   output: dist-electron
@@ -19,11 +19,11 @@ mac:
     - target: dmg
       arch: [x64, arm64]
   extraResources:
-    - from: dist/python-backend
-      to: python-backend
+    - from: dist/pindahan-backend
+      to: pindahan-backend
 
 dmg:
-  title: iPhone Manager
+  title: Pindahan
   window:
     width: 540
     height: 380
@@ -43,13 +43,12 @@ win:
     - target: nsis
       arch: [x64]
   extraResources:
-    - from: dist/python-backend.exe
-      to: python-backend.exe
+    - from: dist/pindahan-backend.exe
+      to: pindahan-backend.exe
 
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
-  installerHeaderIcon: build-assets/icon.ico   # optional, remove if no icon
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: iPhone Manager
+  shortcutName: Pindahan

@@ -34,7 +34,7 @@ function getPythonBinary () {
     return { bin: interpreter, args: [path.join(__dirname, '..', 'main.py')] };
   }
   // Packaged: bundled binary in app's Resources folder
-  const name = process.platform === 'win32' ? 'python-backend.exe' : 'python-backend';
+  const name = process.platform === 'win32' ? 'pindahan-backend.exe' : 'pindahan-backend';
   const bin  = path.join(process.resourcesPath, name);
   if (!fs.existsSync(bin)) {
     throw new Error(`Python backend not found at: ${bin}`);
@@ -103,7 +103,7 @@ function createMainWindow (port) {
     height: 800,
     minWidth: 860,
     minHeight: 600,
-    title: 'iPhone Manager',
+    title: 'Pindahan',
     backgroundColor: '#0f0f12',
     show: false,
     // macOS: hide titlebar, keep traffic lights
@@ -151,7 +151,7 @@ app.whenReady().then(async () => {
   } catch (err) {
     loadingWin.close();
     await dialog.showErrorBox(
-      'Failed to start iPhone Manager',
+      'Failed to start Pindahan',
       `${err.message}\n\nTry relaunching the app. If the problem persists, reinstall it.`,
     );
     app.quit();
@@ -193,4 +193,18 @@ ipcMain.handle('pick-folder', async () => {
 // Open a path in Finder / Explorer
 ipcMain.handle('show-in-folder', async (_e, filePath) => {
   shell.showItemInFolder(filePath);
+});
+
+// Window controls (used by Windows custom titlebar)
+ipcMain.handle('minimize-window', () => {
+  if (mainWindow) mainWindow.minimize();
+});
+ipcMain.handle('maximize-window', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) mainWindow.unmaximize();
+    else mainWindow.maximize();
+  }
+});
+ipcMain.handle('close-window', () => {
+  if (mainWindow) mainWindow.close();
 });
