@@ -81,8 +81,8 @@ jobs:
         if: runner.os == 'Windows'
         run: npx electron-builder --win --publish never
         env:
-          # Skip code signing
-          WIN_CSC_LINK: ""
+          # Skip code signing — do NOT set WIN_CSC_LINK (even empty string causes errors)
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
 
       # ── Upload artifacts ─────────────────────────────────────────────────────
       - name: Upload macOS .dmg
