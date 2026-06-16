@@ -61,6 +61,26 @@ jobs:
           $size = (Get-Item dist\pindahan-backend\pindahan-backend.exe).Length / 1MB
           Write-Host "Python backend size: $([math]::Round($size,1)) MB"
 
+      - name: Download ADB platform-tools (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          curl -sL https://dl.google.com/android/repository/platform-tools-latest-darwin.zip -o pt.zip
+          unzip -q pt.zip platform-tools/adb
+          mkdir -p build-assets/adb-mac
+          cp platform-tools/adb build-assets/adb-mac/adb
+          chmod +x build-assets/adb-mac/adb
+
+      - name: Download ADB platform-tools (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          Invoke-WebRequest https://dl.google.com/android/repository/platform-tools-latest-windows.zip -OutFile pt.zip
+          Expand-Archive pt.zip -DestinationPath pt
+          New-Item -ItemType Directory -Force -Path build-assets/adb-win
+          Copy-Item pt/platform-tools/adb.exe build-assets/adb-win/
+          Copy-Item pt/platform-tools/AdbWinApi.dll build-assets/adb-win/
+          Copy-Item pt/platform-tools/AdbWinUsbApi.dll build-assets/adb-win/
+
       # ── Node / Electron ─────────────────────────────────────────────────────
       - uses: actions/setup-node@v4
         with:

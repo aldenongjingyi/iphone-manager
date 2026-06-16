@@ -23,6 +23,10 @@ mac:
       to: pindahan-backend
       filter:
         - "**/*"
+    - from: build-assets/adb-mac
+      to: adb
+      filter:
+        - "**/*"
 
 dmg:
   title: Pindahan
@@ -47,6 +51,10 @@ win:
   extraResources:
     - from: dist/pindahan-backend
       to: pindahan-backend
+      filter:
+        - "**/*"
+    - from: build-assets/adb-win
+      to: adb
       filter:
         - "**/*"
 

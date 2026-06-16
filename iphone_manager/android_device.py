@@ -16,13 +16,16 @@ from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+# Use bundled adb if provided via ADB_PATH env var (set by Electron main.js)
+_ADB_BIN = os.environ.get('ADB_PATH', 'adb')
+
 # ── ADB helpers ───────────────────────────────────────────────────────────────
 
 def _adb(*args, timeout=15):
     """Run an adb command, return (stdout, returncode)."""
     try:
         result = subprocess.run(
-            ['adb', *args],
+            [_ADB_BIN, *args],
             capture_output=True, text=True, timeout=timeout
         )
         return result.stdout.strip(), result.returncode
@@ -126,55 +129,47 @@ VIDEO_EXTENSIONS = {'.mp4', '.mov', '.avi', '.mkv', '.m4v', '.3gp', '.wmv'}
 
 
 def list_android_media(serial):
-    """List all media files in /sdcard/DCIM."""
-    out, rc = _adb('-s', serial, 'shell',
-                   'find', '/sdcard/DCIM', '-type', 'f',
-                   timeout=30)
-    if rc != 0:
-        out2, rc2 = _adb('-s', serial, 'shell',
-                         'find', '/sdcard/Pictures', '-type', 'f',
-                         timeout=30)
-        if rc2 == 0:
-            out = (out + '\n' + out2).strip()
-        elif not out:
-            return []
+    """List all media files from device in one batched ADB call."""
+    # One shell invocation: find files + stat them all in one round-trip
+    search = '/sdcard/DCIM /sdcard/Pictures /sdcard/Movies /sdcard/WhatsApp/Media'
+    cmd = (
+        f'find {search} -type f 2>/dev/null | '
+        'while IFS= read -r f; do stat -c "%n	%s	%Y" "" 2>/dev/null; done'
+    )
+    out, rc = _adb('-s', serial, 'shell', cmd, timeout=120)
 
     files = []
     for line in out.splitlines():
-        path = line.strip()
-        if not path:
+        line = line.strip()
+        if not line or '	' not in line:
             continue
+        parts = line.split('	')
+        if len(parts) < 3:
+            continue
+        path = parts[0]
+        try:
+            size  = int(parts[1])
+            mtime = int(float(parts[2]))
+        except (ValueError, IndexError):
+            size, mtime = 0, 0
+
         ext = Path(path).suffix.lower()
         if ext not in MEDIA_EXTENSIONS:
             continue
 
-        # Get file size
-        size_out, _ = _adb('-s', serial, 'shell', 'stat', '-c', '%s %Y', path)
-        size, mtime = 0, 0
-        try:
-            parts = size_out.split()
-            size  = int(parts[0])
-            mtime = int(parts[1])
-        except Exception:
-            pass
-
-        ftype = 'video' if ext in VIDEO_EXTENSIONS else 'image'
-        fname = Path(path).name
-
         files.append({
-            'path': path,
-            'filename': fname,
-            'folder': str(Path(path).parent.name),
-            'size': size,
-            'size_mb': round(size / 1_048_576, 2),
-            'mtime': mtime,
-            'type': ftype,
-            'ext': ext,
+            'path':     path,
+            'filename': Path(path).name,
+            'folder':   Path(path).parent.name,
+            'size':     size,
+            'size_mb':  round(size / 1_048_576, 2),
+            'mtime':    mtime,
+            'type':     'video' if ext in VIDEO_EXTENSIONS else 'image',
+            'ext':      ext,
             'device_type': 'android',
         })
 
     return files
-
 
 def get_android_thumbnail(serial, file_path, size=300):
     """Pull file from device and return JPEG thumbnail bytes."""

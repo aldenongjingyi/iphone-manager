@@ -64,7 +64,11 @@ let _backendStderr = '';
 
 function startPythonBackend (port) {
   const { bin, args } = getPythonBinary();
-  const env = { ...process.env, PORT: String(port), ELECTRON: '1' };
+  const adbBin = process.platform === 'win32' ? 'adb.exe' : 'adb';
+  const adbPath = app.isPackaged
+    ? require('path').join(process.resourcesPath, 'adb', adbBin)
+    : adbBin;
+  const env = { ...process.env, PORT: String(port), ELECTRON: '1', ADB_PATH: adbPath };
 
   pythonProcess = spawn(bin, args, { env, windowsHide: true });
 
