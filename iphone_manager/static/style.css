@@ -96,6 +96,8 @@ body.platform-mac #titlebar { padding-left:80px }
 .tb-badge-label { font-size:11.5px; font-weight:550; color:var(--good); letter-spacing:.01em }
 .btn-refresh { display:flex; align-items:center; gap:7px; padding:6px 12px; background:var(--card-hi); border:1px solid var(--line-2); border-radius:8px; color:var(--tx); font-size:12.5px; font-weight:500; transition:background .12s }
 .btn-refresh:hover { background:#2A2A2E }
+.btn-tb-eject { display:flex; align-items:center; gap:7px; padding:6px 12px; background:transparent; border:1px solid var(--line-2); border-radius:8px; color:var(--tx-2); font-size:12.5px; font-weight:500; transition:color .12s,background .12s }
+.btn-tb-eject:hover { background:#2A2A2E; color:var(--tx) }
 .tb-demo { font-size:10.5px; font-weight:600; letter-spacing:.1em; color:var(--tx-3); font-family:var(--mono); padding:3px 8px; border:1px solid var(--line-2); border-radius:6px }
 
 /* Windows window controls */
